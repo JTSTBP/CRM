@@ -1,0 +1,65 @@
+const express = require('express');
+const mongoose = require('mongoose');
+const dotenv = require('dotenv');
+const cors = require('cors');
+const path = require("path");
+
+// Load environment variables
+dotenv.config();
+
+const app = express();
+const PORT = process.env.PORT || 5000;
+
+// Middleware
+app.use(cors());
+app.use(express.json());
+
+// Database Connection
+mongoose.connect(process.env.MONGO_URI)
+  .then(() => {
+    console.log("DB connected");
+    startNotificationJob(); // Start push notification background job
+    startBDDailyReportJob(); // Start BD executive daily report scheduler
+
+    app.listen(PORT || 5000, () => {
+      console.log("Server running");
+    });
+  })
+  .catch(err => {
+    console.error("DB connection failed:", err);
+    process.exit(1);
+  });
+
+// Routes
+const authRoutes = require('./routes/authRoutes');
+const leadRoutes = require('./routes/leadRoutes');
+const taskRoutes = require('./routes/taskRoutes');
+const pushRoutes = require('./routes/pushRoutes');
+const pocBucketRoutes = require('./routes/pocBucket');
+const dashboardRoutes = require('./routes/dashboardRoutes');
+const attendanceRoutes = require('./routes/attendanceRoutes');
+const emailLeadRoutes = require('./routes/emailLeadRoutes');
+const { startNotificationJob } = require('./notificationJob');
+const bdDailyReportRoutes = require('./routes/bdDailyReportRoutes');
+const { startBDDailyReportJob } = require('./bdDailyReportJob');
+
+app.use('/api/auth', authRoutes);
+app.use('/api/leads', leadRoutes);
+app.use('/api/tasks', taskRoutes);
+app.use('/api/push', pushRoutes);
+app.use('/api/poc-bucket', pocBucketRoutes);
+app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/attendance', attendanceRoutes);
+app.use('/api/email-leads', emailLeadRoutes);
+app.use('/api/bd-daily-reports', bdDailyReportRoutes);
+
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use(express.static(path.join(__dirname, "dist")));
+
+app.use((req, res) => {
+    res.sendFile(path.join(__dirname, "dist", "index.html"));
+});
+// Basic Route
+
+
+// Server start moved to DB connection block
