@@ -339,17 +339,44 @@ router.get('/agent-calls', auth, async (req, res) => {
 
         const calls = await CallActivity.find(query)
             .sort({ timestamp: -1 })
-            .populate('leadId', 'company_name points_of_contact');
+            .populate('leadId', 'company_name points_of_contact remarks');
 
         const formattedCalls = calls.map(call => {
             // Find POC details from lead's points_of_contact
             let pocName = 'Unknown';
             let designation = 'N/A';
+            let poc = null;
             if (call.leadId && call.leadId.points_of_contact) {
-                const poc = call.leadId.points_of_contact.id(call.pocId);
+                poc = call.leadId.points_of_contact.id(call.pocId);
                 if (poc) {
-                    pocName = poc.name;
+                    pocName = poc.name || 'Unknown';
                     designation = poc.designation || 'N/A';
+                }
+            }
+
+            // Retrieve call remark or fallback to latest remark associated with this POC/Lead
+            let remarks = (call.remarks || '').trim();
+            if (!remarks && call.leadId && Array.isArray(call.leadId.remarks)) {
+                // 1. Check POC's latest_remark_id
+                if (poc && poc.latest_remark_id) {
+                    const r = call.leadId.remarks.id(poc.latest_remark_id);
+                    if (r && r.content) {
+                        remarks = r.content.replace(/^\[POC:[^\]]+\]\s*/i, '').trim();
+                    }
+                }
+                // 2. Check latest remark for this pocId
+                if (!remarks && call.pocId) {
+                    const pocRemarks = call.leadId.remarks.filter(r => r.poc_id?.toString() === call.pocId?.toString());
+                    if (pocRemarks.length > 0) {
+                        remarks = pocRemarks[pocRemarks.length - 1].content?.replace(/^\[POC:[^\]]+\]\s*/i, '').trim() || '';
+                    }
+                }
+                // 3. Fallback to latest remark on the lead
+                if (!remarks && call.leadId.remarks.length > 0) {
+                    const lastRemark = call.leadId.remarks[call.leadId.remarks.length - 1];
+                    if (lastRemark && lastRemark.content) {
+                        remarks = lastRemark.content.replace(/^\[POC:[^\]]+\]\s*/i, '').trim() || '';
+                    }
                 }
             }
 
@@ -361,7 +388,7 @@ router.get('/agent-calls', auth, async (req, res) => {
                 phoneNumber: call.phone,
                 callType: call.device || 'Manual',
                 timestamp: call.timestamp,
-                remarks: call.remarks || 'No remarks',
+                remarks: remarks || 'No remarks',
                 stageAfterCall: call.stage
             };
         });
@@ -997,8 +1024,8 @@ router.get('/manager-agent-calls', auth, async (req, res) => {
             return res.status(400).json({ message: 'Agent ID is required' });
         }
 
-        // Verify agent is within the manager's team
-        if (!allIds.includes(agentId)) {
+        // Verify agent is within the manager's team (Admins can view any agent)
+        if (req.user.role !== 'Admin' && !allIds.includes(agentId)) {
             return res.status(403).json({ message: 'Agent not in your team' });
         }
 
@@ -1012,16 +1039,43 @@ router.get('/manager-agent-calls', auth, async (req, res) => {
 
         const calls = await CallActivity.find(query)
             .sort({ timestamp: -1 })
-            .populate('leadId', 'company_name points_of_contact');
+            .populate('leadId', 'company_name points_of_contact remarks');
 
         const formattedCalls = calls.map(call => {
             let pocName = 'Unknown';
             let designation = 'N/A';
+            let poc = null;
             if (call.leadId && call.leadId.points_of_contact) {
-                const poc = call.leadId.points_of_contact.id(call.pocId);
+                poc = call.leadId.points_of_contact.id(call.pocId);
                 if (poc) {
-                    pocName = poc.name;
+                    pocName = poc.name || 'Unknown';
                     designation = poc.designation || 'N/A';
+                }
+            }
+
+            // Retrieve call remark or fallback to latest remark associated with this POC/Lead
+            let remarks = (call.remarks || '').trim();
+            if (!remarks && call.leadId && Array.isArray(call.leadId.remarks)) {
+                // 1. Check POC's latest_remark_id
+                if (poc && poc.latest_remark_id) {
+                    const r = call.leadId.remarks.id(poc.latest_remark_id);
+                    if (r && r.content) {
+                        remarks = r.content.replace(/^\[POC:[^\]]+\]\s*/i, '').trim();
+                    }
+                }
+                // 2. Check latest remark for this pocId
+                if (!remarks && call.pocId) {
+                    const pocRemarks = call.leadId.remarks.filter(r => r.poc_id?.toString() === call.pocId?.toString());
+                    if (pocRemarks.length > 0) {
+                        remarks = pocRemarks[pocRemarks.length - 1].content?.replace(/^\[POC:[^\]]+\]\s*/i, '').trim() || '';
+                    }
+                }
+                // 3. Fallback to latest remark on the lead
+                if (!remarks && call.leadId.remarks.length > 0) {
+                    const lastRemark = call.leadId.remarks[call.leadId.remarks.length - 1];
+                    if (lastRemark && lastRemark.content) {
+                        remarks = lastRemark.content.replace(/^\[POC:[^\]]+\]\s*/i, '').trim() || '';
+                    }
                 }
             }
 
@@ -1033,7 +1087,7 @@ router.get('/manager-agent-calls', auth, async (req, res) => {
                 phoneNumber: call.phone,
                 callType: call.device || 'Manual',
                 timestamp: call.timestamp,
-                remarks: call.remarks || 'No remarks',
+                remarks: remarks || 'No remarks',
                 stageAfterCall: call.stage
             };
         });
