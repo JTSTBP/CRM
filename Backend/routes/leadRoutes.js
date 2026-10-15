@@ -29,7 +29,11 @@ const buildLeadQuery = (params) => {
     if (leadStage) query.stage = leadStage;
     if (assignedBy) query.assignedBy = assignedBy;
     if (pocStage) {
-        query.points_of_contact = { $elemMatch: { stage: pocStage } };
+        const pocMatch = { stage: pocStage };
+        if (!status || status === 'approved') {
+            pocMatch.approvalStatus = { $nin: ['pending', 'rejected'] };
+        }
+        query.points_of_contact = { $elemMatch: pocMatch };
     }
     if (startDate || endDate) {
         query.createdAt = {};
@@ -114,6 +118,9 @@ router.get('/', auth, async (req, res) => {
             // If viewing approved leads (or default), hide pending/rejected POCs
             if (!req.query.status || req.query.status === 'approved') {
                 leadObj.points_of_contact = (leadObj.points_of_contact || []).filter(poc => !['pending', 'rejected'].includes(poc.approvalStatus));
+            }
+            if (req.query.pocStage) {
+                leadObj.points_of_contact = (leadObj.points_of_contact || []).filter(poc => poc.stage === req.query.pocStage);
             }
             return leadObj;
         });

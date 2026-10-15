@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Search, Filter, Plus, Upload, Edit2, Trash2, AlertCircle, Briefcase, Calendar, ChevronLeft, ChevronRight, Globe, Users, RefreshCw, LayoutPanelTop, ChevronDown, User, ExternalLink, Square, CheckSquare, X, Check, UserCheck } from 'lucide-react';
 import { API_BASE_URL } from '../../config';
@@ -39,6 +39,7 @@ const POC_STAGES = ["New", "Contacted", "Busy", "No Answer", "Wrong Number"];
 const Leads: React.FC = () => {
     const [leads, setLeads] = useState<Lead[]>([]);
     const [loading, setLoading] = useState(true);
+    const latestLeadRequest = useRef(0);
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [totalLeads, setTotalLeads] = useState(0);
@@ -148,6 +149,7 @@ const Leads: React.FC = () => {
     };
 
     const fetchLeads = async () => {
+        const requestId = ++latestLeadRequest.current;
         try {
             setLoading(true);
             const token = localStorage.getItem('token');
@@ -177,13 +179,14 @@ const Leads: React.FC = () => {
             }
 
             const data = await response.json();
+            if (requestId !== latestLeadRequest.current) return;
             setLeads(data.leads);
             setTotalPages(data.totalPages);
             setTotalLeads(data.totalLeads);
         } catch (err: any) {
-            toast.error(err.message);
+            if (requestId === latestLeadRequest.current) toast.error(err.message);
         } finally {
-            setLoading(false);
+            if (requestId === latestLeadRequest.current) setLoading(false);
         }
     };
 
@@ -821,6 +824,7 @@ const Leads: React.FC = () => {
                                                             .map((poc: any, idx: number) => (
                                                                 <div key={idx} className="flex flex-col">
                                                                     <span className="text-[0.7rem] font-bold text-[#0f1c2e]">{poc.name}</span>
+                                                                    {poc.stage && <span className="text-[0.6rem] font-medium text-slate-500">{poc.stage}</span>}
                                                                     <div className="flex items-center gap-2">
                                                                         <a
                                                                             href={`tel:${poc.phone}`}
