@@ -80,10 +80,34 @@ const PORT = process.env.PORT || 5000;
 
 // ==================== CORS CONFIGURATION ====================
 
+
 const allowedOrigins = [
-  process.env.FRONTEND_URL,
+  "https://jobsterritory-crm-frontend.onrender.com",
   "http://localhost:5173",
-].filter(Boolean);
+  process.env.FRONTEND_URL,
+].filter(Boolean).map((url) => url.replace(/\/$/, ""));
+
+const corsOptions = {
+  origin: (origin, callback) => {
+    // Allow server-to-server requests and approved frontend origins
+    if (!origin || allowedOrigins.includes(origin.replace(/\/$/, ""))) {
+      return callback(null, true);
+    }
+
+    console.error("CORS blocked origin:", origin);
+    return callback(new Error("Origin not allowed by CORS"));
+  },
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: [
+    "Content-Type",
+    "Authorization",
+    "x-auth-token",
+  ],
+  optionsSuccessStatus: 204,
+};
+
+app.use(cors(corsOptions));
+app.use(express.json());
 
 app.use(
   cors({
