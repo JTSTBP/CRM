@@ -57,7 +57,7 @@ function App() {
           <Route path="/admin-login" element={<Login type="admin" />} />
 
           {/* Agent Route */}
-          <Route path="/dashboard" element={<AgentDashboard />} />
+          <Route path="/dashboard" element={getRedirectPath() === '/dashboard' ? <AgentDashboard /> : <Navigate to={getRedirectPath()} replace />} />
 
           {/* Manager Protected Routes */}
           <Route path="/manager" element={<ManagerLayout />}>
