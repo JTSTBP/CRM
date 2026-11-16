@@ -12,8 +12,13 @@ const nodemailer = require('nodemailer');
 
 // Helper to build lead query based on filters
 const buildLeadQuery = (params) => {
-    const { search, leadStage, assignedBy, pocStage, startDate, endDate, status, isDuplicate } = params;
+    const { search, leadStage, assignedBy, pocStage, industry, startDate, endDate, status, isDuplicate } = params;
     let query = {};
+    const industryTerm = typeof industry === 'string' ? industry.trim().slice(0, 100) : '';
+    if (industryTerm) {
+        const escapedIndustry = industryTerm.replace(/[.*+?^{}$()|[\]\\]/g, '\\$&');
+        query.industry_name = { $regex: escapedIndustry, $options: 'i' };
+    }
 
     if (search) {
         query.$and = query.$and || [];

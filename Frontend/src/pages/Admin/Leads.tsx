@@ -64,6 +64,7 @@ const Leads: React.FC = () => {
     const [filters, setFilters] = useState({
         leadStage: '',
         pocStage: '',
+        industry: '',
         assignedBy: '',
         startDate: '',
         endDate: ''
@@ -163,6 +164,7 @@ const Leads: React.FC = () => {
 
             if (filters.leadStage) params.append('leadStage', filters.leadStage);
             if (filters.pocStage) params.append('pocStage', filters.pocStage);
+            if (filters.industry.trim()) params.append('industry', filters.industry.trim());
             if (filters.assignedBy) params.append('assignedBy', filters.assignedBy);
             if (filters.startDate) params.append('startDate', filters.startDate);
             if (filters.endDate) params.append('endDate', filters.endDate);
@@ -444,7 +446,7 @@ const Leads: React.FC = () => {
                             >
                                 <Filter size={18} />
                                 Filters
-                                {(filters.leadStage || filters.pocStage || filters.assignedBy || filters.startDate || filters.endDate) && (
+                                {(filters.leadStage || filters.pocStage || filters.industry.trim() || filters.assignedBy || filters.startDate || filters.endDate) && (
                                     <div className="flex items-center justify-center w-4 h-4 bg-rose-500 text-white rounded-full text-[10px]">
                                         !
                                     </div>
@@ -464,7 +466,7 @@ const Leads: React.FC = () => {
                                 <Filter size={16} className="text-[#0ea5e9]" />
                                 <h2 className="text-xs font-bold text-[#0f1c2e] uppercase tracking-wider">Advanced Filters</h2>
                             </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
                                 <div className="space-y-1.5">
                                     <label className="text-[0.65rem] font-bold text-slate-400 uppercase tracking-wider ml-1">Lead Stage</label>
                                     <div className="relative">
@@ -494,6 +496,21 @@ const Leads: React.FC = () => {
                                         <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
                                     </div>
                                 </div>
+
+                                <label className="block min-w-0 space-y-1.5">
+                                    <span className="block ml-1 text-[0.65rem] font-bold uppercase tracking-wider text-slate-400">Industry</span>
+                                    <input
+                                        type="search"
+                                        placeholder="All industries"
+                                        value={filters.industry}
+                                        maxLength={100}
+                                        onChange={(event) => {
+                                            setPage(1);
+                                            setFilters(previous => ({ ...previous, industry: event.target.value }));
+                                        }}
+                                        className="w-full rounded-xl border border-slate-100 bg-slate-50 px-3 py-2 text-xs font-bold text-[#0f1c2e] focus:outline-none focus:ring-2 focus:ring-[#0ea5e9]/10"
+                                    />
+                                </label>
 
                                 {currentUserRole !== 'BD Executive' && (
                                     <div className="space-y-1.5">

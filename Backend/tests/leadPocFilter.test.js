@@ -38,6 +38,12 @@ async function listLeads(query, contacts) {
     return JSON.parse(JSON.stringify({ result, databaseQuery, countQuery }));
 }
 
+test('industry filter applies a literal case-insensitive match to results and count', async () => {
+    const { databaseQuery, countQuery } = await listLeads({ industry: '  Health (Tech)  ' }, []);
+    assert.deepEqual(databaseQuery.industry_name, { $regex: 'Health \\(Tech\\)', $options: 'i' });
+    assert.deepEqual(countQuery.industry_name, databaseQuery.industry_name);
+});
+
 const contacts = [
     { name: 'First', stage: 'New', approvalStatus: 'approved' },
     { name: 'Second', stage: 'Busy', approvalStatus: 'approved' },
