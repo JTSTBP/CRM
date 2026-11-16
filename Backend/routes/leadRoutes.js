@@ -535,6 +535,8 @@ router.get('/approval-pocs', auth, async (req, res) => {
                             phone: "$points_of_contact.phone",
                             email: "$points_of_contact.email",
                             designation: "$points_of_contact.designation",
+                            linkedin_url: "$points_of_contact.linkedin_url",
+                            rejectionReason: "$points_of_contact.rejectionReason",
                             approvalStatus: "$points_of_contact.approvalStatus",
                             createdAt: "$points_of_contact.createdAt",
                             createdBy: {
@@ -650,7 +652,7 @@ router.get('/pocs', auth, async (req, res) => {
 
         pipeline.push(
             { $unwind: "$points_of_contact" },
-            { $match: { "points_of_contact.approvalStatus": { $ne: 'pending' } } }
+            { $match: { "points_of_contact.approvalStatus": { $nin: ['pending', 'rejected'] } } }
         );
 
         if (pocStage) {
@@ -1267,7 +1269,17 @@ router.delete('/:id', auth, async (req, res) => {
 // @access  Private
 router.post('/:id/poc', auth, async (req, res) => {
     try {
-        const { name, designation, phone, email, linkedin_url, stage } = req.body;
+        const { name, designation, phone, email, stage } = req.body;
+        let { linkedin_url } = req.body;
+        const linkedinSubmission = req.body.approvalStatus === 'pending' && !name && !phone && !email;
+        if (linkedinSubmission) {
+            const profile = typeof linkedin_url === 'string'
+                && linkedin_url.trim().match(/^https:\/\/(?:(?:www|[a-z]{2})\.)?linkedin\.com\/in\/([a-z0-9%_-]+)\/?(?:[?#].*)?$/i);
+            if (!profile) {
+                return res.status(400).json({ message: 'Enter a valid HTTPS LinkedIn profile URL.' });
+            }
+            linkedin_url = `https://www.linkedin.com/in/${profile[1].toLowerCase()}/`;
+        }
         if (!name && !phone && !email && !linkedin_url) {
             return res.status(400).json({ message: 'At least one identifying field (Name, Phone, Email, or LinkedIn) is required.' });
         }
@@ -1315,16 +1327,26 @@ router.post('/:id/poc', auth, async (req, res) => {
             approvalStatus: initialStatus,
             createdBy: req.user.id
         };
-        lead.points_of_contact.push(newPOC);
-        await lead.save();
-
-        const addedPOC = lead.points_of_contact[lead.points_of_contact.length - 1];
+        const addedPOC = lead.points_of_contact.create(newPOC);
+        if (linkedinSubmission) {
+            const result = await Lead.updateOne(
+                { _id: lead._id, 'points_of_contact.linkedin_url': { $ne: linkedin_url } },
+                { $push: { points_of_contact: addedPOC.toObject() } },
+                { runValidators: true }
+            );
+            if (!result.modifiedCount) {
+                return res.status(409).json({ message: 'This LinkedIn profile is already listed for this company.' });
+            }
+        } else {
+            lead.points_of_contact.push(addedPOC);
+            await lead.save();
+        }
 
         // Log activity
         await logActivity({
             leadId: lead._id,
             type: 'POC Added',
-            description: `Added new Point of Contact: ${name}`,
+            description: `Added new Point of Contact: ${name || linkedin_url || phone || email}`,
             userId: req.user.id,
             userName: req.user.name,
             metadata: { pocId: addedPOC._id, name, designation }
@@ -1683,9 +1705,18 @@ router.patch('/:id/approve-poc/:pocId', auth, async (req, res) => {
 
         const poc = lead.points_of_contact.id(req.params.pocId);
         if (!poc) return res.status(404).json({ message: 'POC not found' });
+        const details = req.body?.details;
+        if (details !== undefined && req.user.role !== 'Admin') {
+            return res.status(403).json({ message: 'Only an admin can submit contact details for approval.' });
+        }
+        const contact = details === undefined ? poc : Object.fromEntries(
+            ['name', 'phone', 'designation', 'email'].map(field => [
+                field, typeof details?.[field] === 'string' ? details[field].trim() : ''
+            ])
+        );
 
         // Validate POC
-        if (!poc.name || !poc.phone) {
+        if (!contact.name || !contact.phone) {
             return res.status(400).json({ message: 'POC Name and Phone are required for approval' });
         }
 
@@ -1693,26 +1724,36 @@ router.patch('/:id/approve-poc/:pocId', auth, async (req, res) => {
         const isDuplicate = lead.points_of_contact.some(p =>
             p._id.toString() !== req.params.pocId &&
             p.approvalStatus === 'approved' &&
-            (p.phone === poc.phone || (poc.email && p.email && p.email === poc.email))
+            (p.phone === contact.phone || (contact.email && p.email && p.email.toLowerCase() === contact.email.toLowerCase()))
         );
 
         if (isDuplicate) {
             return res.status(400).json({ message: 'A contact with this phone or email already exists in this lead.' });
         }
 
-        poc.approvalStatus = 'approved';
-        await lead.save();
+        const expectedStatus = details === undefined && poc.approvalStatus === 'rejected' ? 'rejected' : 'pending';
+        const fields = details === undefined ? {} : Object.fromEntries(Object.entries(contact).map(([key, value]) => [
+            `points_of_contact.$.${key}`, value
+        ]));
+        const approvedLead = await Lead.findOneAndUpdate(
+            { _id: lead._id, points_of_contact: { $elemMatch: { _id: poc._id, approvalStatus: expectedStatus } } },
+            { $set: { ...fields, 'points_of_contact.$.approvalStatus': 'approved' } },
+            { new: true, runValidators: true }
+        );
+        if (!approvedLead) {
+            return res.status(409).json({ message: 'This contact status has changed. Refresh the list.' });
+        }
 
         // Log activity
         await logActivity({
             leadId: lead._id,
             type: 'POC Approved',
-            description: `POC "${poc.name}" for lead "${lead.company_name || lead.website_url}" was approved.`,
+            description: `POC "${contact.name}" for lead "${lead.company_name || lead.website_url}" was approved.`,
             userId: req.user.id,
             userName: req.user.name
         });
 
-        res.json({ message: 'Point of Contact approved successfully', lead });
+        res.json({ message: 'Point of Contact approved successfully', lead: approvedLead });
     } catch (err) {
         console.error('Approve POC error:', err);
         res.status(500).json({ message: 'Server Error' });
@@ -1728,16 +1769,28 @@ router.patch('/:id/reject-poc/:pocId', auth, async (req, res) => {
             return res.status(403).json({ message: 'Access denied.' });
         }
 
-        const lead = await Lead.findById(req.params.id);
-        if (!lead) return res.status(404).json({ message: 'Lead not found' });
+        const reason = typeof req.body?.reason === 'string' ? req.body.reason.trim() : '';
+        if (!reason || reason.length > 500) {
+            return res.status(400).json({ message: 'Enter a rejection reason of 1 to 500 characters.' });
+        }
 
-        const poc = lead.points_of_contact.id(req.params.pocId);
-        if (!poc) return res.status(404).json({ message: 'POC not found' });
-
-        poc.approvalStatus = 'rejected';
-        poc.rejectedBy = req.user.id;
-        poc.rejectedAt = new Date();
-        await lead.save();
+        const query = { _id: req.params.id, points_of_contact: { $elemMatch: { _id: req.params.pocId, approvalStatus: 'pending' } } };
+        if (req.user.role === 'Manager') {
+            const reporters = await User.find({ reporter: req.user.id }).select('_id');
+            const teamIds = [req.user.id, ...reporters.map(user => user._id)];
+            query.$or = ['assignedBy', 'createdBy', 'assignedTo'].map(field => ({ [field]: { $in: teamIds } }));
+        }
+        const lead = await Lead.findOneAndUpdate(
+            query,
+            { $set: {
+                'points_of_contact.$.approvalStatus': 'rejected',
+                'points_of_contact.$.rejectionReason': reason,
+                'points_of_contact.$.rejectedBy': req.user.id,
+                'points_of_contact.$.rejectedAt': new Date(),
+            } },
+            { new: true, runValidators: true }
+        );
+        if (!lead) return res.status(409).json({ message: 'This contact is no longer pending. Refresh the list.' });
         await lead.populate('points_of_contact.rejectedBy', 'name email');
         res.json({ message: 'Point of Contact rejected successfully', lead });
     } catch (err) {

@@ -307,12 +307,19 @@ const [assigneeSearch, setAssigneeSearch] = useState('');
     };
 
     const handleRejectPoc = async (leadId: string, pocId: string) => {
-        if (!window.confirm('Are you sure you want to REJECT this contact?')) return;
+        const input = window.prompt('Why are you rejecting this contact? The reason will be visible on the company’s contact card.');
+        if (input === null) return;
+        const reason = input.trim();
+        if (!reason || reason.length > 500) {
+            toast.error('Enter a rejection reason of 1 to 500 characters.');
+            return;
+        }
         try {
             const token = localStorage.getItem('token');
             const response = await fetch(`${API_BASE_URL}/api/leads/${leadId}/reject-poc/${pocId}`, {
                 method: 'PATCH',
-                headers: { 'x-auth-token': token || '' }
+                headers: { 'Content-Type': 'application/json', 'x-auth-token': token || '' },
+                body: JSON.stringify({ reason }),
             });
             if (response.ok) { 
                 toast.success('Contact rejected!'); 
@@ -567,6 +574,11 @@ const renderRow = (item: any, isRejected = false) => (
                           </span>
                         ) : (
                           <span className="text-[0.65rem] font-bold text-slate-400">{item.phone || 'No contact details'}</span>
+                        )}
+                        {isRejected && item.rejectionReason && (
+                            <p className="mt-2 max-w-xs whitespace-pre-wrap break-words text-xs text-rose-700">
+                                <strong>Rejection reason</strong> {item.rejectionReason}
+                            </p>
                         )}
                         </div>
                     </div>

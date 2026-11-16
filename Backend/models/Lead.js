@@ -38,6 +38,7 @@ const PointOfContactSchema = new mongoose.Schema({
     },
     rejectedBy: { type: mongoose.Schema.Types.ObjectId, ref: "users" },
     rejectedAt: { type: Date },
+    rejectionReason: { type: String, trim: true, maxlength: 500 },
     createdAt: { type: Date, default: Date.now },
     createdBy: {
         type: mongoose.Schema.Types.ObjectId,

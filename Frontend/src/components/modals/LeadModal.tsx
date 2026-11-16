@@ -15,6 +15,7 @@ import PostCallFeedbackModal from './PostCallFeedbackModal';
 import TaskModal from './TaskModal';
 import RemarkModal from './RemarkModal';
 import AutoMessagePopup from './AutoMessagePopup';
+import PendingLinkedInContacts from './PendingLinkedInContacts';
 import { API_BASE_URL } from '../../config';
 
 interface Props {
@@ -327,12 +328,12 @@ const LeadModal: React.FC<Props> = ({ isOpen, onClose, leadId, initialMode = 'vi
                 if (!poc.name && !poc.phone && !poc.alternate_phone && !poc.email && !poc.linkedin_url) continue;
 
                                 // Name is mandatory for approved POCs, except when editing from Email Sending tab
-                if (poc.approvalStatus !== 'pending' && !poc.name && source !== 'email_sending' && !isEmailSending) {
+                if (!['pending', 'rejected'].includes(poc.approvalStatus) && !poc.name && source !== 'email_sending' && !isEmailSending) {
                     toast.error('Point of Contact Name is mandatory');
                     return;
                 }
                 // Phone is mandatory for approved POCs, except when editing from Email Sending tab
-                if (poc.approvalStatus !== 'pending' && !poc.phone && source !== 'email_sending' && !isEmailSending) {
+                if (!['pending', 'rejected'].includes(poc.approvalStatus) && !poc.phone && source !== 'email_sending' && !isEmailSending) {
                     toast.error(`Phone number is mandatory for approved contact: ${poc.name}`);
                     return;
                 }
@@ -668,7 +669,7 @@ const LeadModal: React.FC<Props> = ({ isOpen, onClose, leadId, initialMode = 'vi
                         <div className="grid grid-cols-1 gap-4">
                             {mode === 'view' ? (
                                 (lead?.points_of_contact || [])
-                                    .filter((p: any) => p.approvalStatus !== 'pending')
+                                    .filter((p: any) => !['pending', 'rejected'].includes(p.approvalStatus))
                                     .map((poc: any, idx: number) => (
                                         <div key={idx} className="bg-white border border-slate-100 rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm hover:shadow-md transition-all group">
                                             <div className="flex items-center gap-4 w-full sm:w-auto">
@@ -844,6 +845,18 @@ const LeadModal: React.FC<Props> = ({ isOpen, onClose, leadId, initialMode = 'vi
                                 ))
                             )}
                         </div>
+                        {mode === 'view' && leadId && lead?._id === leadId && source !== 'email_sending' && !isEmailSending && (
+                            <PendingLinkedInContacts
+                                key={leadId}
+                                leadId={leadId}
+                                contacts={(lead.points_of_contact || []).filter((poc: any) => ['pending', 'rejected'].includes(poc.approvalStatus))}
+                                isAdmin={currentUser?.role === 'Admin'}
+                                onChange={async () => {
+                                    await fetchLeadDetails();
+                                    onUpdate();
+                                }}
+                            />
+                        )}
                     </div>
                 );
             case 'remarks':
@@ -880,7 +893,7 @@ const LeadModal: React.FC<Props> = ({ isOpen, onClose, leadId, initialMode = 'vi
                             <button
                                 onClick={() => {
                                     // If there's at least one POC, use the first one as default for the remark
-                                    const firstPoc = (lead?.points_of_contact || []).filter((p: any) => p.approvalStatus !== 'pending')[0];
+                                    const firstPoc = (lead?.points_of_contact || []).find((p: any) => !['pending', 'rejected'].includes(p.approvalStatus));
                                     if (firstPoc) {
                                         setActivePocForRemark(firstPoc);
                                         setShowRemarkModal(true);
