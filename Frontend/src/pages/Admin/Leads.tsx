@@ -51,6 +51,7 @@ const Leads: React.FC = () => {
     const [showFilters, setShowFilters] = useState(true);
     const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
     const [users, setUsers] = useState<any[]>([]);
+    const activeAssignees = users.filter(user => user.status === 'Active');
 
     const [isBulkAssignModalOpen, setIsBulkAssignModalOpen] = useState(false);
     const [selectedBulkAssignees, setSelectedBulkAssignees] = useState<string[]>([]);
@@ -1038,7 +1039,7 @@ const Leads: React.FC = () => {
                                         className="bg-transparent text-[0.65rem] font-bold focus:outline-none cursor-pointer w-full border-none text-white appearance-none py-1"
                                     >
                                         <option value="" className="bg-[#0f1c2e]">Assignee...</option>
-                                        {users.map(u => (
+                                        {activeAssignees.map(u => (
                                             <option key={u._id} value={u._id} className="bg-[#0f1c2e]">
                                                 {u.name}
                                             </option>
@@ -1165,7 +1166,7 @@ const Leads: React.FC = () => {
                                 </div>
 
                                 <div className="space-y-1.5 max-h-[250px] overflow-y-auto custom-scrollbar">
-                                    {users
+                                    {activeAssignees
                                         .filter(u =>
                                             (u.name?.toLowerCase() || '').includes(bulkUserSearch.toLowerCase()) ||
                                             (u.role?.toLowerCase() || '').includes(bulkUserSearch.toLowerCase())
