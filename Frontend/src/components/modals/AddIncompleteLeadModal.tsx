@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-    X, Plus, Globe, Building2, Mail, Linkedin, Briefcase, Users, User, RefreshCw, AlertCircle, Check, Search,
+    X, Plus, Globe, Building2, Mail, Linkedin, Briefcase, Users, User, RefreshCw, AlertCircle,
     Sparkles, Phone, Send, Handshake, Trophy, XCircle, UserCheck, Timer, Target, TrendingUp, Calendar
 } from 'lucide-react';
 import { API_BASE_URL } from '../../config';
@@ -47,7 +47,6 @@ const AddIncompleteLeadModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, l
     });
 
     const [users, setUsers] = useState<any[]>([]);
-    const [userSearch, setUserSearch] = useState('');
     const [loading, setLoading] = useState(false);
     const [fetchingLead, setFetchingLead] = useState(false);
     const currentUserRole = JSON.parse(localStorage.getItem('user') || '{}')?.role;
@@ -122,25 +121,9 @@ const AddIncompleteLeadModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, l
         }
     };
 
-    const filteredUsers = users.filter(u =>
-        (u.name?.toLowerCase() || '').includes(userSearch.toLowerCase()) ||
-        (u.role?.toLowerCase() || '').includes(userSearch.toLowerCase())
-    );
-
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
-    };
-
-    const toggleAssignee = (userId: string) => {
-        setFormData(prev => {
-            const isAssigned = prev.assignedTo.includes(userId);
-            if (isAssigned) {
-                return { ...prev, assignedTo: prev.assignedTo.filter(id => id !== userId) };
-            } else {
-                return { ...prev, assignedTo: [...prev.assignedTo, userId] };
-            }
-        });
     };
 
     const updatePOC = (index: number, field: string, value: string) => {
@@ -210,6 +193,7 @@ const AddIncompleteLeadModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, l
                     company_size: formData.company_size?.trim() || '',
                     industry_name: formData.industry_name?.trim() || '',
                     linkedin_link: formData.linkedin_link?.trim() || '',
+                    assignedTo: leadId ? undefined : formData.assignedTo,
                     points_of_contact: cleanedPocs.map(poc => ({
                         ...poc,
                         name: poc.name?.trim() || '',
@@ -338,7 +322,7 @@ const AddIncompleteLeadModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, l
 
                             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                                 {/* Column 1: Core Info */}
-                                <div className={`${(isBD && !isPocOnly) ? 'lg:col-span-3' : 'lg:col-span-2'} grid grid-cols-1 md:grid-cols-2 gap-6`}>
+                                <div className={`${(!isBD && !isPocOnly) ? 'lg:col-span-3' : 'lg:col-span-2'} grid grid-cols-1 md:grid-cols-2 gap-6`}>
                                     <div className="space-y-1.5">
                                         <label className="text-[0.65rem] font-bold text-slate-400 uppercase tracking-wider ml-1">Website URL</label>
                                         <div className="relative group">
@@ -437,8 +421,8 @@ const AddIncompleteLeadModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, l
 
                                 </div>
 
-                                {/* Column 2: Multi-Assignee Selection */}
-                                {(isBD || isPocOnly) ? (
+                                {/* Current assignees */}
+                                {(isBD || isPocOnly) && (
                                     <div className="space-y-3">
                                         <label className="text-[0.65rem] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
                                             <User size={14} className="text-[#0ea5e9]" />
@@ -459,63 +443,6 @@ const AddIncompleteLeadModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, l
                                             }) : (
                                                 <span className="text-xs font-bold text-slate-400 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200">No users assigned</span>
                                             )}
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <div className="space-y-3">
-                                        <label className="text-[0.65rem] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
-                                            <User size={14} className="text-[#0ea5e9]" />
-                                            Assign To (Multiple)
-                                        </label>
-                                        <div className="bg-slate-50 border border-slate-200 rounded-2xl overflow-hidden flex flex-col h-[300px]">
-                                            <div className="p-3 border-b border-slate-200 bg-white/50">
-                                                <div className="relative">
-                                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
-                                                    <input
-                                                        type="text"
-                                                        placeholder="Search employees..."
-                                                        value={userSearch}
-                                                        onChange={(e) => setUserSearch(e.target.value)}
-                                                        className="w-full bg-white border border-slate-200 rounded-lg py-1.5 pl-9 pr-3 text-[0.7rem] font-bold focus:border-[#0ea5e9] transition-all outline-none"
-                                                    />
-                                                </div>
-                                            </div>
-                                            <div className="flex-1 overflow-y-auto p-2 space-y-1">
-                                                {filteredUsers.length > 0 ? filteredUsers.map((u) => (
-                                                    <div
-                                                        key={u._id}
-                                                        onClick={() => toggleAssignee(u._id)}
-                                                        className={`flex items-center justify-between p-2.5 rounded-xl transition-all cursor-pointer ${formData.assignedTo.includes(u._id)
-                                                            ? 'bg-[#0ea5e9] text-white shadow-lg shadow-sky-500/20'
-                                                            : 'hover:bg-white text-slate-600'
-                                                            }`}
-                                                    >
-                                                        <div className="flex items-center gap-2.5">
-                                                            <div className={`w-7 h-7 rounded-lg flex items-center justify-center font-black text-[0.6rem] ${formData.assignedTo.includes(u._id) ? 'bg-white/20' : 'bg-slate-200'
-                                                                }`}>
-                                                                {u.name?.[0] || '?'}
-                                                            </div>
-                                                            <div className="flex flex-col">
-                                                                <span className="text-[0.7rem] font-black leading-none">{u.name}</span>
-                                                                <span className={`text-[0.6rem] font-bold ${formData.assignedTo.includes(u._id) ? 'text-white/70' : 'text-slate-400'}`}>{u.role}</span>
-                                                            </div>
-                                                        </div>
-                                                        {formData.assignedTo.includes(u._id) && <Check size={14} strokeWidth={4} />}
-                                                    </div>
-                                                )) : (
-                                                    <div className="p-8 text-center text-slate-400 text-xs font-bold">No users found</div>
-                                                )}
-                                            </div>
-                                            <div className="p-3 bg-white border-t border-slate-200 flex items-center justify-between">
-                                                <span className="text-[0.6rem] font-black text-slate-400 uppercase tracking-widest">{formData.assignedTo.length} Selected</span>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setFormData(prev => ({ ...prev, assignedTo: [] }))}
-                                                    className="text-[0.6rem] font-black text-rose-500 uppercase hover:underline"
-                                                >
-                                                    Clear All
-                                                </button>
-                                            </div>
                                         </div>
                                     </div>
                                 )}

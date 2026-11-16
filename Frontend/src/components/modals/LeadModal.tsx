@@ -8,7 +8,7 @@ import {
     ArrowRightLeft, UserCheck, UserMinus, RefreshCw, CheckCheck,
     History, BarChart3, ChevronDown, AlertCircle, Sparkles,
     Send, Handshake, Trophy, XCircle, Timer,
-    Target, Briefcase, Search
+    Target, Briefcase
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import PostCallFeedbackModal from './PostCallFeedbackModal';
@@ -110,19 +110,6 @@ const LeadModal: React.FC<Props> = ({ isOpen, onClose, leadId, initialMode = 'vi
 
     // Schedule dropdown state
     const [activeSchedulePocId, setActiveSchedulePocId] = useState<string | null>(null);
-
-    const [userSearch, setUserSearch] = useState('');
-
-    const toggleAssignee = (userId: string) => {
-        const isAssigned = (formData.assignedTo || []).includes(userId);
-        const updatedAssignedTo = isAssigned
-            ? (formData.assignedTo || []).filter((id: string) => id !== userId)
-            : [...(formData.assignedTo || []), userId];
-            
-        const updated = { ...formData, assignedTo: updatedAssignedTo };
-        setFormData(updated);
-        handleSave(updated);
-    };
 
     useEffect(() => {
         if (isOpen) {
@@ -388,6 +375,7 @@ const LeadModal: React.FC<Props> = ({ isOpen, onClose, leadId, initialMode = 'vi
                     email: poc.email?.trim() || '',
                     linkedin_url: poc.linkedin_url?.trim() || '',
                 })),
+                assignedTo: isCreate ? dataToSave.assignedTo : undefined,
                 status: isCreate ? 'approved' : undefined
             };
 
@@ -1553,94 +1541,6 @@ const LeadModal: React.FC<Props> = ({ isOpen, onClose, leadId, initialMode = 'vi
                                                     </div>
                                                     <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 pointer-events-none group-hover:text-[#0ea5e9] transition-colors" size={16} />
                                                 </div>
-                                            </div>
-
-                                            {/* Assigned Persons (Multi-Assignee Selection) */}
-                                            <div className="space-y-3 mt-4">
-                                                <label className="text-[0.65rem] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
-                                                    <User size={14} className="text-[#0ea5e9]" />
-                                                    Assign To (Multiple)
-                                                </label>
-                                                
-                                                {isBDExecutive ? (
-                                                    // Read-only view for BD Executive
-                                                    <div className="flex flex-wrap gap-1.5 p-1.5 bg-slate-50 rounded-2xl border border-slate-100">
-                                                        {formData.assignedTo && formData.assignedTo.length > 0 ? (
-                                                            users.filter(u => formData.assignedTo.includes(u._id)).map(u => (
-                                                                <div key={u._id} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-slate-100 shadow-sm text-xs font-bold text-slate-700">
-                                                                    <div className="w-5 h-5 rounded-lg bg-[#0ea5e9]/10 text-[#0ea5e9] flex items-center justify-center font-black text-[0.65rem]">
-                                                                        {u.name[0]}
-                                                                    </div>
-                                                                    <span>{u.name}</span>
-                                                                </div>
-                                                            ))
-                                                        ) : (
-                                                            <p className="text-[0.7rem] font-bold text-slate-400 italic px-3 py-2">No persons assigned</p>
-                                                        )}
-                                                    </div>
-                                                ) : (
-                                                    // Interactive searchable multi-select for Admin/Manager
-                                                    <div className="bg-slate-50 border border-slate-200 rounded-2xl overflow-hidden flex flex-col h-[260px]">
-                                                        <div className="p-2 border-b border-slate-200 bg-white/50">
-                                                            <div className="relative">
-                                                                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" size={12} />
-                                                                <input
-                                                                    type="text"
-                                                                    placeholder="Search employees..."
-                                                                    value={userSearch}
-                                                                    onChange={(e) => setUserSearch(e.target.value)}
-                                                                    className="w-full bg-white border border-slate-200 rounded-lg py-1 pl-8 pr-2.5 text-[0.7rem] font-bold focus:border-[#0ea5e9] transition-all outline-none"
-                                                                />
-                                                            </div>
-                                                        </div>
-                                                        <div className="flex-1 overflow-y-auto p-1.5 space-y-1 custom-scrollbar">
-                                                            {users
-                                                                .filter(u =>
-                                                                    (u.name?.toLowerCase() || '').includes(userSearch.toLowerCase()) ||
-                                                                    (u.role?.toLowerCase() || '').includes(userSearch.toLowerCase())
-                                                                )
-                                                                .map((u) => {
-                                                                    const isAssigned = (formData.assignedTo || []).includes(u._id);
-                                                                    return (
-                                                                        <div
-                                                                            key={u._id}
-                                                                            onClick={() => toggleAssignee(u._id)}
-                                                                            className={`flex items-center justify-between p-2 rounded-xl transition-all cursor-pointer ${isAssigned
-                                                                                ? 'bg-[#0ea5e9] text-white shadow-lg shadow-sky-500/20'
-                                                                                : 'hover:bg-white text-slate-600'
-                                                                                }`}
-                                                                        >
-                                                                            <div className="flex items-center gap-2">
-                                                                                <div className={`w-6 h-6 rounded-lg flex items-center justify-center font-black text-[0.6rem] ${isAssigned ? 'bg-white/20' : 'bg-slate-200'
-                                                                                    }`}>
-                                                                                    {u.name[0]}
-                                                                                </div>
-                                                                                <div className="flex flex-col">
-                                                                                    <span className="text-[0.7rem] font-black leading-none">{u.name}</span>
-                                                                                    <span className={`text-[0.55rem] font-bold ${isAssigned ? 'text-white/70' : 'text-slate-400'}`}>{u.role}</span>
-                                                                                </div>
-                                                                            </div>
-                                                                            {isAssigned && <Check size={12} strokeWidth={4} />}
-                                                                        </div>
-                                                                    );
-                                                                })}
-                                                        </div>
-                                                        <div className="p-2 bg-white border-t border-slate-200 flex items-center justify-between">
-                                                            <span className="text-[0.55rem] font-black text-slate-400 uppercase tracking-widest">{(formData.assignedTo || []).length} Selected</span>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => {
-                                                                    const updated = { ...formData, assignedTo: [] };
-                                                                    setFormData(updated);
-                                                                    handleSave(updated);
-                                                                }}
-                                                                className="text-[0.55rem] font-black text-rose-500 uppercase hover:underline"
-                                                            >
-                                                                Clear All
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                )}
                                             </div>
 
                                             {lead?.createdAt && (
