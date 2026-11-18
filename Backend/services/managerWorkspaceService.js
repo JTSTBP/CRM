@@ -8,6 +8,7 @@ const models = require("../models/BDMonitoring"),
   service = require("./bdMonitoringService"),
   reporting = require("./bdDashboardService");
 const ratio = (a, b) => (b ? Math.round((a / b) * 100) : null);
+const normalizeCompanyArrays = require('./normalizeCompanyArrays');
 function range(query, now = new Date()) {
   const today = rules.dayKey(now);
   let from = today,
@@ -46,7 +47,7 @@ function requireManager(access) {
   if (!["Manager", "Admin"].includes(access.role))
     service.fail("Manager access required.", 403);
 }
-async function dashboard(access, query) {
+async function dashboard(access, query, options = {}) {
   requireManager(access);
   const now = new Date(),
     today = rules.dayKey(now),
@@ -75,7 +76,7 @@ async function dashboard(access, query) {
       ? employees.filter((person) => String(person._id) === query.employee)
       : employees,
     ids = members.map((person) => person._id);
-  const allLeads = await Lead.find({
+  const allLeadsRaw = await Lead.find({
     ...service.leadQuery(access),
     status: { $nin: ["incomplete", "rejected"] },
   })
@@ -83,6 +84,7 @@ async function dashboard(access, query) {
       "company_name companyProfile assignedBy assignedTo createdBy stage points_of_contact bdPlanning createdAt",
     )
     .lean();
+  const allLeads = allLeadsRaw.map(normalizeCompanyArrays);
   const territories = [
     ...new Set(
       allLeads.map((lead) => lead.companyProfile?.territory).filter(Boolean),
@@ -94,9 +96,9 @@ async function dashboard(access, query) {
     (lead) =>
       (!query.territory ||
         lead.companyProfile?.territory === query.territory) &&
-      [lead.assignedBy, lead.createdBy, ...lead.assignedTo].some((owner) =>
+      ((options.allCompanies && !query.employee) || [lead.assignedBy, lead.createdBy, ...lead.assignedTo].some((owner) =>
         ids.some((id) => String(id) === String(owner)),
-      ),
+      )),
   );
   const leadIds = leads.map((lead) => lead._id),
     leadMap = new Map(leads.map((lead) => [String(lead._id), lead])),
@@ -457,6 +459,9 @@ async function dashboard(access, query) {
     return {
       _id: id,
       name: member.name,
+      reporter: member.reporter ? String(member.reporter) : null,
+      followupDue: due.length,
+      followupOnTime: due.filter(task => task.completed && task.completedAt && new Date(task.completedAt) <= new Date(task.due_date)).length,
       territories: [
         ...new Set(
           leads

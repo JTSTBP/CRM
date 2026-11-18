@@ -275,9 +275,10 @@ router.get(
 );
 router.post(
   "/contact/:leadId/:pocId",
-  handle((req, access) =>
-    service.saveActivity(access, req.params.leadId, req.params.pocId, req.body),
-  ),
+  handle((req, access) => {
+    require('../services/mobileCallPolicy').assertMobileCall(req.get('user-agent'), req.body);
+    return service.saveActivity(access, req.params.leadId, req.params.pocId, req.body);
+  }),
 );
 
 router.post(
@@ -991,4 +992,5 @@ router.put(
 );
 router.use(require('./companyWorkspaceRoutes'));
 router.use(require('./managerWorkspaceRoutes'));
+router.use(require('./adminWorkspaceRoutes'));
 module.exports = router;

@@ -37,8 +37,8 @@ async function api(user, route, method = "GET", payload) {
   );
   const response = await fetch(base + route, {
     method,
-    headers: { "Content-Type": "application/json", "x-auth-token": token },
-    ...(payload === undefined ? {} : { body: JSON.stringify(payload) }),
+    headers: { "Content-Type": "application/json", "x-auth-token": token, "User-Agent":"Mozilla/5.0 (iPhone) Mobile" },
+    ...(payload === undefined ? {} : { body: JSON.stringify({...payload,mobileDialStarted:true}) }),
   });
   return { status: response.status, data: await response.json() };
 }
@@ -527,6 +527,20 @@ test(
       points_of_contact: [{ name: "Assigned contact", email: "assigned@test.invalid" },
         { name: "Unapproved contact", approvalStatus: "pending" }] });
     const assignedContact = assignedContactLead.points_of_contact[0];
+    const priorEmailAt=new Date(Date.now()-2*rules.DAY),priorDue=new Date(Date.now()-rules.DAY);
+    await models.ContactState.create({leadId:assignedContactLead._id,pocId:assignedContact._id,ownerId:bd._id,email:'Sent',emailSubject:'Prior email subject',emailAt:priorEmailAt,dueAt:priorDue,nextAction:'Existing follow-up'});
+    const selectedPath=`/contact/${assignedContactLead._id}/${assignedContact._id}`;
+    const selectedActivity={requestId:requestId(),revision:0,activityType:'whatsapp',whatsapp:'Sent',whatsappConfirmed:true,email:'Failed',emailConfirmed:true,callOutcome:'Connected',remarks:'WhatsApp introduction confirmed'};
+    const beforeSelectedCalls=await Call.countDocuments();
+    assert.equal((await api(outsider,selectedPath,'POST',selectedActivity)).status,404);
+    const selectedSaved=await api(bd,selectedPath,'POST',selectedActivity);
+    assert.equal(selectedSaved.status,200,JSON.stringify(selectedSaved.data));
+    assert.equal((await api(bd,selectedPath,'POST',selectedActivity)).status,200);
+    const selectedState=(await api(bd,selectedPath)).data.state;
+    assert.equal(selectedState.whatsapp,'Sent');assert.equal(selectedState.email,'Sent');assert.equal(new Date(selectedState.emailAt).getTime(),+priorEmailAt);assert.equal(new Date(selectedState.dueAt).getTime(),+priorDue);
+    assert.equal(await Call.countDocuments(),beforeSelectedCalls);
+    const selectedEvent=await models.Event.findOne({requestId:selectedActivity.requestId});assert.equal(selectedEvent.data.emailConfirmed,false);assert.equal(selectedEvent.data.callLogged,false);
+    assert.equal((await api(bd,selectedPath,'POST',{...selectedActivity,requestId:requestId()})).status,409);
     const detailPath = `/leads/poc/${assignedContact._id}`;
     const detail = await api(bd, detailPath);
     assert.equal(detail.status, 200, JSON.stringify(detail.data));
@@ -539,9 +553,9 @@ test(
     assert.equal((await api(bd, "/tasks", "POST", { ...taskPayload, poc_id: String(contact._id) })).status, 400);
     const newTask = await api(bd, "/tasks", "POST", taskPayload);
     assert.equal(newTask.status, 201, JSON.stringify(newTask.data));
-    assert.equal((await api(bd, detailPath)).data.tasks.length, 1);
+    assert.equal((await api(bd, detailPath)).data.tasks.length, 2);
     assert.equal((await api(bd, `/task/${newTask.data._id}/complete`, "PATCH", { requestId: requestId() })).status, 200);
-    assert.equal((await api(bd, detailPath)).data.tasks[0].completed, true);
+    assert.equal((await api(bd, detailPath)).data.tasks.find(task => task._id === newTask.data._id).completed, true);
     const requirements = { requestId: requestId(), hiringNeeds: ["Regional manager", "Merchandiser"], positions: 8, designations: 2 };
     assert.equal((await api(outsider, `/requirements/${assignedContactLead._id}`, "POST", requirements)).status, 404);
     assert.equal((await api(bd, `/requirements/${assignedContactLead._id}`, "POST", { ...requirements, positions: -1 })).status, 400);

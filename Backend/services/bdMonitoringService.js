@@ -227,8 +227,9 @@ async function saveActivity(access, leadId, pocId, body) {
   }
   const now = new Date();
   const config = await settings();
-  const validated = validateActivity(body, now);
+  const input = body;
   return mongoose.connection.transaction(async (session) => {
+    let body = input;
     const previous = await models.Event.findOne({
       actorId: access.id,
       requestId: key,
@@ -285,8 +286,14 @@ async function saveActivity(access, leadId, pocId, body) {
         ...(await contactHistory(leadId, pocId, session)),
       });
     }
+    const partial = Boolean(body.activityType);
+    const dueProvided = Object.prototype.hasOwnProperty.call(body, 'dueAt');
+    if (partial) body = require('./contactActivityPatch').activityPatch(body, state);
+    const validated = validateActivity(partial && !dueProvided ? {...body, dueAt: ''} : body, now);
+    if (partial && !dueProvided) validated.dueAt = state.dueAt;
     const oldLinkedin = state.linkedin;
     for (const channel of ["whatsapp", "email", "linkedinFollowup"]) {
+      if (partial && body.activityType !== channel) continue;
       const sentToday =
         state[`${channel}At`] &&
         rules.dayKey(state[`${channel}At`]) === rules.dayKey(now);

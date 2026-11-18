@@ -1980,6 +1980,8 @@ router.post('/bulk-upload', auth, async (req, res) => {
 // @desc    Update POC stage, add remark, and log call activity
 // @access  Private
 router.post('/:leadId/poc/:pocId/call', auth, async (req, res) => {
+    try { require('../services/mobileCallPolicy').assertMobileCall(req.get('user-agent'), {...req.body,callOutcome:'Call'}); }
+    catch(error) { return res.status(403).json({message:error.message}); }
     try {
         const { leadId, pocId } = req.params;
         const { stage, remarks, device } = req.body;
@@ -2389,6 +2391,3 @@ router.post('/send-auto-message-email', auth, async (req, res) => {
 });
 
 module.exports = router;
-
-
-
