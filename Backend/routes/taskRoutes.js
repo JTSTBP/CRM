@@ -3,6 +3,7 @@ const router = express.Router();
 const Task = require('../models/Task');
 const auth = require('../middleware/authMiddleware');
 const logActivity = require('../utils/logActivity');
+const bdAccess = require('../services/bdMonitoringService');
 
 // @route   GET /api/tasks/my-tasks
 // @desc    Get all pending tasks assigned to the current user
@@ -54,10 +55,21 @@ router.get('/lead/:leadId', auth, async (req, res) => {
 router.post('/', auth, async (req, res) => {
     try {
         const { title, description, due_date, type, lead_id, poc_id, user_id } = req.body;
-        console.log('[DEBUG POST] Task req.body:', req.body);
 
         if (!title || !due_date) {
             return res.status(400).json({ message: 'Title and due date are required' });
+        }
+
+        if (poc_id) {
+            const access = await bdAccess.scope(req.user);
+            const company = await bdAccess.accessibleLead(access, lead_id);
+            const contact = company.points_of_contact.find(p => String(p._id) === String(poc_id));
+            if (!contact || ['pending', 'rejected'].includes(contact.approvalStatus)) {
+                return res.status(400).json({ message: 'Choose an approved contact belonging to this company.' });
+            }
+            if (user_id && access.role !== 'Admin' && !access.ids.some(id => String(id) === String(user_id))) {
+                return res.status(403).json({ message: 'Task assignee is outside your scope.' });
+            }
         }
 
         const task = new Task({
@@ -87,7 +99,7 @@ router.post('/', auth, async (req, res) => {
         res.status(201).json(task);
     } catch (err) {
         console.error('Create task error:', err);
-        res.status(500).json({ message: 'Server Error' });
+        res.status(err.status || 500).json({ message: err.status ? err.message : 'Server Error' });
     }
 });
 

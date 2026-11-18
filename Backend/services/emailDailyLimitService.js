@@ -97,6 +97,12 @@ const completeDailyEmailReservation = async (reservationId, sentAt = new Date())
     { new: true }
   );
   if (!result) throw new Error('Email send reservation could not be completed.');
+  try {
+    await require('./bdMonitoringService').syncProviderEmail(result);
+  } catch (error) {
+    // Delivery already succeeded. The monitoring job retries this projection.
+    console.error('Email monitoring projection pending:', error.message);
+  }
   return result;
 };
 

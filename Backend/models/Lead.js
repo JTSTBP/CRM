@@ -69,6 +69,15 @@ const LeadSchema = new mongoose.Schema(
         no_of_designations: { type: Number, default: null },
         no_of_positions: { type: Number, default: null },
         stageProposalUpd: { type: Date, default: null },
+        bdPlanning: {
+            qualifiedForProposal: { type: Boolean, default: false },
+            expectedOnboardingAt: { type: Date },
+            note: { type: String },
+            openRequirements: { type: Number, min: 0, max: 100000 },
+            probability: { type: Number, min: 0, max: 100 },
+            updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'users' },
+            updatedAt: { type: Date },
+        },
         stage: {
             type: String,
             enum: [

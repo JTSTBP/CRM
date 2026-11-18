@@ -13,9 +13,13 @@ const taskSchema = new mongoose.Schema({
     completed: { type: Boolean, default: false },
     completedAt: { type: Date },
     pushNotificationSent: { type: Boolean, default: false },
+    monitoringKey: { type: String },
+    monitoringDisposition: { type: String, enum: ['Superseded', 'Resolved'] },
     created_at: { type: Date, default: Date.now },
 });
 
 addTaskAudit(taskSchema);
+taskSchema.index({ monitoringKey: 1 }, { unique: true, sparse: true });
+taskSchema.index({ user_id: 1, completed: 1, due_date: 1 });
 
 module.exports = mongoose.model("Task", taskSchema);

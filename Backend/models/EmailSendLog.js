@@ -49,7 +49,8 @@ const EmailSendLogSchema = new mongoose.Schema({
   reservationExpiresAt: {
     type: Date,
     default: null
-  }
+  },
+  bdMonitoringRecorded: { type: Boolean }
 }, { timestamps: true });
 
 EmailSendLogSchema.index({ userId: 1, sentAt: 1, status: 1 });

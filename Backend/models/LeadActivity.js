@@ -45,4 +45,5 @@ const LeadActivitySchema = new mongoose.Schema({
     timestamp: { type: Date, default: Date.now }
 });
 
+LeadActivitySchema.index({ leadId: 1, type: 1, timestamp: -1, _id: -1 });
 module.exports = mongoose.model('LeadActivity', LeadActivitySchema);

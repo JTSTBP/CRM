@@ -9,6 +9,7 @@ const logActivity = require('../utils/logActivity');
 const auth = require('../middleware/authMiddleware');
 const mongoose = require('mongoose');
 const nodemailer = require('nodemailer');
+const bdAccess = require('../services/bdMonitoringService');
 
 // Helper to build lead query based on filters
 const buildLeadQuery = (params) => {
@@ -805,35 +806,13 @@ router.get('/pocs', auth, async (req, res) => {
 // @access  Private
 router.get('/poc/:pocId', auth, async (req, res) => {
     try {
-        const lead = await Lead.findOne({ "points_of_contact._id": req.params.pocId }).populate('assignedBy', 'name email').lean();
-        if (!lead) {
-            return res.status(404).json({ message: 'Contact not found' });
-        }
-
-        // Enforce data isolation for non-admins
-        if (req.user.role !== 'Admin') {
-            let userIds = [req.user.id];
-            if (req.user.role === 'Manager') {
-                const reporters = await User.find({ reporter: req.user.id }).select('_id');
-                userIds = userIds.concat(reporters.map(r => r._id.toString()));
-            }
-            if (!userIds.includes(lead.assignedBy._id.toString())) {
-                return res.status(403).json({ message: 'Access denied. You do not own the lead for this contact.' });
-            }
-        }
-
+        const access = await bdAccess.scope(req.user);
+        if (!mongoose.isValidObjectId(req.params.pocId)) return res.status(404).json({ message: 'Contact not found' });
+        const lead = await Lead.findOne({ "points_of_contact._id": req.params.pocId, ...bdAccess.leadQuery(access) })
+            .populate('assignedBy assignedTo createdBy', 'name email').lean();
+        if (!lead) return res.status(404).json({ message: 'Contact not found or access denied' });
         const poc = lead.points_of_contact.find(p => p._id.toString() === req.params.pocId);
-
-        // Fetch Tasks (Filtered by user unless Admin)
-        const taskQuery = { poc_id: req.params.pocId };
-        if (req.user.role !== 'Admin') {
-            let userIds = [req.user.id];
-            if (req.user.role === 'Manager') {
-                const reporters = await User.find({ reporter: req.user.id }).select('_id');
-                userIds = userIds.concat(reporters.map(r => r._id.toString()));
-            }
-            taskQuery.user_id = { $in: userIds };
-        }
+        const taskQuery = { poc_id: req.params.pocId, ...bdAccess.ownerQuery(access, 'user_id') };
         const tasks = await Task.find(taskQuery)
             .populate('user_id', 'name')
             .populate('createdBy', 'name')
@@ -843,7 +822,7 @@ router.get('/poc/:pocId', auth, async (req, res) => {
         const activities = await LeadActivity.find({ leadId: lead._id }).sort({ timestamp: -1 }).lean();
 
         // Fetch specifically Call activities for this POC from CallActivity model
-        const calls = await CallActivity.find({ pocId: req.params.pocId }).sort({ timestamp: -1 }).lean();
+        const calls = await CallActivity.find({ pocId: req.params.pocId, ...bdAccess.ownerQuery(access, 'userId') }).sort({ timestamp: -1 }).lean();
 
         let pocRemarks = [];
         if (Array.isArray(lead.remarks)) {
@@ -852,7 +831,7 @@ router.get('/poc/:pocId', auth, async (req, res) => {
 
         // Strict Isolation: Hide from view if pending (unless Admin/Special flag)
         const includePending = req.query.includePending === 'true';
-        if (poc.approvalStatus === 'pending' && !includePending) {
+        if (['pending', 'rejected'].includes(poc.approvalStatus) && !(access.role === 'Admin' && includePending)) {
             return res.status(403).json({ message: 'Contact is currently pending approval and cannot be viewed in this mode.' });
         }
 
@@ -865,7 +844,16 @@ router.get('/poc/:pocId', auth, async (req, res) => {
                 stage: lead.stage,
                 assignedBy: lead.assignedBy,
                 createdAt: lead.createdAt,
-                points_of_contact: lead.points_of_contact
+                assignedTo: lead.assignedTo,
+                company_size: lead.company_size,
+                company_info: lead.company_info,
+                lead_source: lead.lead_source,
+                linkedin_link: lead.linkedin_link,
+                hiring_needs: lead.hiring_needs,
+                no_of_positions: lead.no_of_positions,
+                no_of_designations: lead.no_of_designations,
+                bdPlanning: lead.bdPlanning,
+                points_of_contact: lead.points_of_contact.filter(p => !['pending', 'rejected'].includes(p.approvalStatus))
             },
             poc,
             remarks: pocRemarks,
@@ -875,7 +863,7 @@ router.get('/poc/:pocId', auth, async (req, res) => {
         });
     } catch (err) {
         console.error('Fetch specific POC error:', err);
-        res.status(500).json({ message: 'Server Error' });
+        res.status(err.status || 500).json({ message: err.status ? err.message : 'Server Error' });
     }
 });
 
@@ -2015,6 +2003,7 @@ router.post('/:leadId/poc/:pocId/call', auth, async (req, res) => {
         // 1. Update POC stage
         poc.stage = stage;
 
+        const previousLeadStage = lead.stage;
         // 2. Auto-advance lead stage to 'Contacted' if it's currently 'New'
         if (lead.stage === 'New') {
             lead.stage = 'Contacted';
@@ -2058,6 +2047,17 @@ router.post('/:leadId/poc/:pocId/call', auth, async (req, res) => {
             timestamp: new Date()
         });
         await callActivity.save();
+
+        if (previousLeadStage !== lead.stage) {
+            await logActivity({
+                leadId,
+                type: 'Stage Changed',
+                description: `Stage changed from "${previousLeadStage}" to "${lead.stage}" after a recorded call.`,
+                userId,
+                userName: user.name,
+                metadata: { from: previousLeadStage, to: lead.stage },
+            });
+        }
 
         // Log to LeadActivity
         await logActivity({

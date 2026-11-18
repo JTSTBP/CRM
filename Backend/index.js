@@ -168,6 +168,8 @@ app.use("/api/tasks", taskRoutes);
 app.use("/api/push", pushRoutes);
 app.use("/api/poc-bucket", pocBucketRoutes);
 app.use("/api/dashboard", dashboardRoutes);
+app.use("/api/bd-monitoring", require("./routes/bdMonitoringRoutes"));
+app.use("/api/bd-workspace", require("./routes/bdWorkspaceRoutes"));
 app.use("/api/attendance", attendanceRoutes);
 app.use("/api/email-leads", emailLeadRoutes);
 app.use("/api/bd-daily-reports", bdDailyReportRoutes);
@@ -203,6 +205,8 @@ const startServer = async () => {
     });
 
     console.log(`MongoDB connected: ${conn.connection.host}`);
+    await Promise.all(Object.values(require("./models/BDMonitoring")).map(model => model.init()));
+    await Promise.all(["Task", "CallActivity", "LeadActivity", "EmailSendLog"].map(name => require(`./models/${name}`).init()));
 
     app.listen(PORT, "0.0.0.0", () => {
       console.log(`CRM backend running on port ${PORT}`);
@@ -211,6 +215,7 @@ const startServer = async () => {
     // Start existing background jobs after DB connection
     startNotificationJob();
     startBDDailyReportJob();
+    require("./bdMonitoringJob").startBDMonitoringJob();
 
   } catch (error) {
     console.error("CRM startup failed:", error.message);
