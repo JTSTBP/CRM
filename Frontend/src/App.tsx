@@ -8,6 +8,7 @@ import Users from './pages/Admin/Users';
 import Leads from './pages/Admin/Leads';
 import Contacts from './pages/Admin/Contacts';
 import ContactDetail from './pages/Admin/ContactDetail';
+import CompanyDetail from './pages/Admin/CompanyDetail';
 import AgentDashboard from './pages/AgentDashboard';
 import TaskReminder from './components/TaskReminder';
 import BDLayout from './components/layout/BDLayout';
@@ -63,6 +64,7 @@ function App() {
           <Route path="/manager" element={<ManagerLayout />}>
             <Route path="dashboard" element={<ManagerDashboard />} />
             <Route path="leads" element={<Leads />} />
+            <Route path="leads/:id" element={<CompanyDetail />} />
             <Route path="add-lead" element={<AddLeadTab />} />
             <Route path="contacts" element={<Contacts />} />
             <Route path="contacts/:id" element={<ContactDetail />} />
@@ -77,6 +79,7 @@ function App() {
             <Route path="dashboard" element={<AdminDashboard />} />
             <Route path="users" element={<Users />} />
             <Route path="leads" element={<Leads />} />
+            <Route path="leads/:id" element={<CompanyDetail />} />
             <Route path="add-lead" element={<AddLeadTab />} />
             <Route path="contacts" element={<Contacts />} />
             <Route path="contacts/:id" element={<ContactDetail />} />
@@ -93,6 +96,7 @@ function App() {
           <Route path="/bd" element={<BDLayout />}>
             <Route path="dashboard" element={<BDDashboard />} />
             <Route path="leads" element={<Leads />} />
+            <Route path="leads/:id" element={<CompanyDetail />} />
             <Route path="add-lead" element={<AddLeadTab />} />
             <Route path="contacts" element={<Contacts />} />
             <Route path="contacts/:id" element={<ContactDetail />} />

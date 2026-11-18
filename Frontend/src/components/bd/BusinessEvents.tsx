@@ -14,11 +14,17 @@ export default function BusinessEvents({
   onSaved,
   initialKind,
   contactView = false,
+  initialReference,
+  initialOwnerId,
+  outcomeOnly = false,
 }: {
   data: ContactWorkspace;
   onSaved: () => Promise<void>;
   initialKind?: "proposal" | "onboarding";
   contactView?: boolean;
+  initialReference?: string;
+  initialOwnerId?: string;
+  outcomeOnly?: boolean;
 }) {
   const [open, setOpen] = useState(Boolean(initialKind));
   const [kind, setKind] = useState(initialKind || "proposal");
@@ -131,6 +137,7 @@ export default function BusinessEvents({
                 Record type
                 <select
                   value={kind}
+                  disabled={Boolean(initialReference)}
                   onChange={(event) =>
                     setKind(event.target.value as "proposal" | "onboarding")
                   }
@@ -148,7 +155,10 @@ export default function BusinessEvents({
                   required
                   name="ownerId"
                   defaultValue={
-                    data.state?.ownerId || data.owners[0]?._id || ""
+                    initialOwnerId ||
+                    data.state?.ownerId ||
+                    data.owners[0]?._id ||
+                    ""
                   }
                   className={fieldClass}
                 >
@@ -164,6 +174,8 @@ export default function BusinessEvents({
                 Unique proposal / activation reference
                 <input
                   name="reference"
+                  defaultValue={initialReference}
+                  readOnly={Boolean(initialReference)}
                   required
                   maxLength={150}
                   className={fieldClass}
@@ -236,103 +248,107 @@ export default function BusinessEvents({
           </div>
         </form>
       )}
-      <div className="max-h-48 space-y-2 overflow-y-auto">
-        {data.business.map((record) => (
-          <div
-            key={record._id}
-            className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-slate-50 px-3 py-2 text-xs"
-          >
-            <span>
-              <strong>{record.reference}</strong> · {record.kind} ·{" "}
-              {record.status} · {displayTime(record.sentAt)}
-            </span>
-            {record.kind === "proposal" && (
-              <button
-                type="button"
-                onClick={() => {
-                  setFeedbackId(record._id);
-                  setOpen(true);
-                }}
-                className="font-semibold text-sky-700"
-              >
-                Update client response
-              </button>
-            )}
-          </div>
-        ))}
-        {!data.business.length && (
-          <p className="text-xs text-slate-500">
-            No confirmed business events recorded.
-          </p>
-        )}
-      </div>
-      <details
-        className="rounded-lg border p-3"
-        open={contactView || undefined}
-      >
-        <summary className="cursor-pointer text-xs font-semibold">
-          Opportunity qualification &amp; expected onboarding
-        </summary>
-        <form onSubmit={plan} className="mt-3 grid gap-3 sm:grid-cols-2">
-          <label className="flex gap-2 text-xs">
-            <input
-              name="qualifiedForProposal"
-              type="checkbox"
-              defaultChecked={data.company.planning?.qualifiedForProposal}
-            />
-            Qualified opportunity awaiting a proposal
-          </label>
-          <label className="space-y-1 text-xs font-semibold">
-            Expected onboarding (your local time)
-            <input
-              type="datetime-local"
-              name="expectedOnboardingAt"
-              defaultValue={toLocalInput(
-                data.company.planning?.expectedOnboardingAt,
+      {!outcomeOnly && (
+        <div className="max-h-48 space-y-2 overflow-y-auto">
+          {data.business.map((record) => (
+            <div
+              key={record._id}
+              className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-slate-50 px-3 py-2 text-xs"
+            >
+              <span>
+                <strong>{record.reference}</strong> · {record.kind} ·{" "}
+                {record.status} · {displayTime(record.sentAt)}
+              </span>
+              {record.kind === "proposal" && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFeedbackId(record._id);
+                    setOpen(true);
+                  }}
+                  className="font-semibold text-sky-700"
+                >
+                  Update client response
+                </button>
               )}
-              className={fieldClass}
-            />
-          </label>
-          <label className="space-y-1 text-xs font-semibold sm:col-span-2">
-            Planning notes
-            <textarea
-              name="note"
-              required
-              defaultValue={data.company.planning?.note}
-              className={fieldClass}
-            />
-          </label>
-          <label className="space-y-1 text-xs font-semibold">
-            Open requirements (positions)
-            <input
-              type="number"
-              min="0"
-              max="100000"
-              step="1"
-              name="openRequirements"
-              defaultValue={data.company.planning?.openRequirements ?? ""}
-              className={fieldClass}
-            />
-          </label>
-          <label className="space-y-1 text-xs font-semibold">
-            Probability weight (%)
-            <input
-              type="number"
-              min="0"
-              max="100"
-              step="1"
-              name="probability"
-              defaultValue={data.company.planning?.probability ?? ""}
-              className={fieldClass}
-            />
-          </label>
-          <div>
-            <button disabled={saving} className={secondaryClass}>
-              Save opportunity plan
-            </button>
-          </div>
-        </form>
-      </details>
+            </div>
+          ))}
+          {!data.business.length && (
+            <p className="text-xs text-slate-500">
+              No confirmed business events recorded.
+            </p>
+          )}
+        </div>
+      )}
+      {!outcomeOnly && (
+        <details
+          className="rounded-lg border p-3"
+          open={contactView || undefined}
+        >
+          <summary className="cursor-pointer text-xs font-semibold">
+            Opportunity qualification &amp; expected onboarding
+          </summary>
+          <form onSubmit={plan} className="mt-3 grid gap-3 sm:grid-cols-2">
+            <label className="flex gap-2 text-xs">
+              <input
+                name="qualifiedForProposal"
+                type="checkbox"
+                defaultChecked={data.company.planning?.qualifiedForProposal}
+              />
+              Qualified opportunity awaiting a proposal
+            </label>
+            <label className="space-y-1 text-xs font-semibold">
+              Expected onboarding (your local time)
+              <input
+                type="datetime-local"
+                name="expectedOnboardingAt"
+                defaultValue={toLocalInput(
+                  data.company.planning?.expectedOnboardingAt,
+                )}
+                className={fieldClass}
+              />
+            </label>
+            <label className="space-y-1 text-xs font-semibold sm:col-span-2">
+              Planning notes
+              <textarea
+                name="note"
+                required
+                defaultValue={data.company.planning?.note}
+                className={fieldClass}
+              />
+            </label>
+            <label className="space-y-1 text-xs font-semibold">
+              Open requirements (positions)
+              <input
+                type="number"
+                min="0"
+                max="100000"
+                step="1"
+                name="openRequirements"
+                defaultValue={data.company.planning?.openRequirements ?? ""}
+                className={fieldClass}
+              />
+            </label>
+            <label className="space-y-1 text-xs font-semibold">
+              Probability weight (%)
+              <input
+                type="number"
+                min="0"
+                max="100"
+                step="1"
+                name="probability"
+                defaultValue={data.company.planning?.probability ?? ""}
+                className={fieldClass}
+              />
+            </label>
+            <div>
+              <button disabled={saving} className={secondaryClass}>
+                Save opportunity plan
+              </button>
+            </div>
+          </form>
+        </details>
+      )}
     </section>
   );
 }

@@ -45,6 +45,7 @@ export const toLocalInput = (value?: string) => {
 };
 
 export interface ContactState {
+  pocId?: string;
   _id: string;
   revision: number;
   ownerId: string;

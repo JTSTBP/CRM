@@ -44,7 +44,6 @@ import EditPOCModal from "../../components/modals/EditPOCModal";
 import TaskModal from "../../components/modals/TaskModal";
 import RemarkModal from "../../components/modals/RemarkModal";
 import SendEmailModal from "../../components/modals/SendEmailModal";
-import LeadModal from "../../components/modals/LeadModal";
 import "../../components/contacts/contactDetail.css";
 
 type Dialog =
@@ -56,7 +55,6 @@ type Dialog =
   | "add"
   | "edit"
   | "requirements"
-  | "company"
   | null;
 export default function ContactDetail() {
   const { id } = useParams<{ id: string }>();
@@ -736,12 +734,12 @@ export default function ContactDetail() {
                 <Building2 size={16} />
                 Company
               </h2>
-              <button
+              <Link
                 className="cc-text-button"
-                onClick={() => setDialog("company")}
+                to={`${prefix}/leads/${lead._id}`}
               >
                 View Master Card
-              </button>
+              </Link>
             </header>
             <div className="cc-inset">
               <div className="cc-company-name">
@@ -933,15 +931,6 @@ export default function ContactDetail() {
             await reload();
             toast.success("Requirements saved");
           }}
-        />
-      )}
-      {dialog === "company" && (
-        <LeadModal
-          isOpen
-          onClose={() => setDialog(null)}
-          leadId={lead._id}
-          onUpdate={saved}
-          initialMode="view"
         />
       )}
     </div>

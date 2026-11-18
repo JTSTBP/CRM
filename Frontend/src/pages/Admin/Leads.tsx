@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import { Search, Filter, Plus, Upload, Edit2, Trash2, AlertCircle, Briefcase, Calendar, ChevronLeft, ChevronRight, Globe, Users, RefreshCw, LayoutPanelTop, ChevronDown, User, ExternalLink, Square, CheckSquare, X, Check, UserCheck } from 'lucide-react';
 import { API_BASE_URL } from '../../config';
 import toast from 'react-hot-toast';
@@ -82,15 +82,15 @@ const Leads: React.FC = () => {
 
     // Handle push notification deep-links: ?openLead=<id>&tab=tasks
     const [searchParams, setSearchParams] = useSearchParams();
+    const navigate = useNavigate();
+    const location = useLocation();
+    const companyPrefix = location.pathname.startsWith('/admin') ? '/admin' : location.pathname.startsWith('/manager') ? '/manager' : '/bd';
 
     useEffect(() => {
         const openLeadId = searchParams.get('openLead');
         if (openLeadId) {
-            setSelectedLeadId(openLeadId);
-            setModalMode('view');
-            setIsModalOpen(true);
-            // Clean URL so refreshing doesn't reopen the modal
-            setSearchParams({}, { replace: true });
+            navigate(`${companyPrefix}/leads/${openLeadId}${searchParams.get('tab') ? `?tab=${encodeURIComponent(searchParams.get('tab')!)}` : ''}`, { replace: true });
+            return;
         }
 
         const stageParam = searchParams.get('stage');
@@ -194,6 +194,7 @@ const Leads: React.FC = () => {
     };
 
     const handleOpenModal = (id: string, mode: 'view' | 'edit' | 'create' = 'view') => {
+        if (mode === 'view' && id !== 'new') { navigate(`${companyPrefix}/leads/${id}`); return; }
         setSelectedLeadId(id === 'new' ? null : id);
         setModalMode(mode);
         setIsModalOpen(true);
