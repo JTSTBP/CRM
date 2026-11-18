@@ -7,13 +7,14 @@ interface Props {
     isOpen: boolean;
     onClose: () => void;
     leadId: string | null;
+    pocId?: string;
     taskToEdit?: any | null; // Pass existing task if editing, or null for creating
     onSuccess: () => void;
 }
 
 const TASK_TYPES = ["Follow-up", "Meeting", "Email", "Call", "Other"];
 
-const TaskModal: React.FC<Props> = ({ isOpen, onClose, leadId, taskToEdit, onSuccess }) => {
+const TaskModal: React.FC<Props> = ({ isOpen, onClose, leadId, pocId, taskToEdit, onSuccess }) => {
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
     const [type, setType] = useState('Follow-up');
@@ -61,7 +62,8 @@ const TaskModal: React.FC<Props> = ({ isOpen, onClose, leadId, taskToEdit, onSuc
                 description,
                 type,
                 due_date: new Date(dueDate).toISOString(),
-                lead_id: leadId // Assuming we always link new tasks to the current lead context
+                lead_id: leadId,
+                ...(pocId ? { poc_id: pocId } : {})
             };
 
             const response = await fetch(url, {
@@ -95,6 +97,7 @@ const TaskModal: React.FC<Props> = ({ isOpen, onClose, leadId, taskToEdit, onSuc
             <div className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 my-auto">
                 <div className="bg-gradient-to-r from-[#0ea5e9] to-[#0284c7] p-6 text-white text-center relative">
                     <button
+                        aria-label="Close task form"
                         onClick={onClose}
                         className="absolute top-4 right-4 p-2 hover:bg-white/10 rounded-xl transition-colors"
                     >
@@ -118,6 +121,7 @@ const TaskModal: React.FC<Props> = ({ isOpen, onClose, leadId, taskToEdit, onSuc
                                 Task Title *
                             </label>
                             <input
+                                aria-label="Task title"
                                 type="text"
                                 value={title}
                                 onChange={(e) => setTitle(e.target.value)}
@@ -132,6 +136,7 @@ const TaskModal: React.FC<Props> = ({ isOpen, onClose, leadId, taskToEdit, onSuc
                                     Task Type
                                 </label>
                                 <select
+                                    aria-label="Task type"
                                     value={type}
                                     onChange={(e) => setType(e.target.value)}
                                     className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-4 py-3 text-sm font-medium text-slate-800 focus:outline-none focus:ring-4 focus:ring-[#0ea5e9]/10 focus:border-[#0ea5e9] transition-all"
@@ -146,6 +151,7 @@ const TaskModal: React.FC<Props> = ({ isOpen, onClose, leadId, taskToEdit, onSuc
                                     <Calendar size={12} /> Due Date & Time *
                                 </label>
                                 <input
+                                    aria-label="Task due date and time"
                                     type="datetime-local"
                                     value={dueDate}
                                     onChange={(e) => setDueDate(e.target.value)}
@@ -159,6 +165,7 @@ const TaskModal: React.FC<Props> = ({ isOpen, onClose, leadId, taskToEdit, onSuc
                                 Description (Optional)
                             </label>
                             <textarea
+                                aria-label="Task description"
                                 value={description}
                                 onChange={(e) => setDescription(e.target.value)}
                                 placeholder="Add any additional notes or context..."
