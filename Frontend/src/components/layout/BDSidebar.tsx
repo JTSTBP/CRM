@@ -1,121 +1,193 @@
-import React from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
-import { API_BASE_URL } from '../../config';
+import { useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
-    LayoutDashboard,
-    BarChart3,
-    UserCircle,
-    LogOut,
-    ChevronRight,
-    ClipboardCheck,
-    Activity,
-    Contact,
-    Mail
-} from 'lucide-react';
+  LayoutDashboard,
+  Contact,
+  CalendarClock,
+  PanelsTopLeft,
+  PhoneCall,
+  Target,
+  BarChart3,
+  Settings,
+  Menu,
+  ChevronDown,
+  LogOut,
+  Mail,
+} from "lucide-react";
+import { API_BASE_URL } from "../../config";
 
-interface BDSidebarProps {
-    isOpen: boolean;
-    setIsOpen: (isOpen: boolean) => void;
+interface Props {
+  isOpen: boolean;
+  setIsOpen: (open: boolean) => void;
+  collapsed?: boolean;
+  onCollapse?: () => void;
 }
 
-const BDSidebar: React.FC<BDSidebarProps> = ({ isOpen, setIsOpen }) => {
-    const navigate = useNavigate();
-
-    const menuItems = [
-        { icon: <LayoutDashboard size={20} />, label: 'Dashboard', path: '/bd/dashboard' },
-        { icon: <Activity size={20} />, label: 'Company Details', path: '/bd/leads' },
-        { icon: <ClipboardCheck size={20} />, label: 'Company Approvals', path: '/bd/add-lead' },
-        { icon: <Contact size={20} />, label: 'Contacts', path: '/bd/contacts' },
-        { icon: <BarChart3 size={20} />, label: 'Reports', path: '/bd/reports' },
-        { icon: <UserCircle size={20} />, label: 'Profile', path: '/bd/profile' },
-        { icon: <Mail size={20} />, label: 'Send Email', path: '/bd/email-sending' },
-    ];
-
-    const handleLogout = async () => {
-        try {
-            const token = localStorage.getItem('token');
-            if (token) {
-                await fetch(`${API_BASE_URL}/api/attendance/logout`, {
-                    method: 'POST',
-                    headers: { 'x-auth-token': token || '' }
-                });
-            }
-        } catch (error) {
-            console.error('Logout error:', error);
-        }
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        navigate('/login');
-    };
-
-    return (
-        <aside className={`
-            fixed inset-y-0 left-0 z-50 w-64 bg-[#0f1c2e] text-white flex flex-col h-screen 
-            transition-transform duration-300 ease-in-out border-r border-slate-800/50 shadow-2xl
-            lg:translate-x-0 lg:sticky lg:top-0 lg:shadow-xl
-            ${isOpen ? 'translate-x-0' : '-translate-x-full'}
-        `}>
-            {/* Brand Logo & Close Button */}
-            <div className="p-6 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                    <img src="/logo.png" alt="CRM Logo" className="h-10 w-auto object-contain" />
-                    <span className="text-xl font-bold tracking-tight">JTCRM</span>
-                </div>
-                <button
+export default function BDSidebar({
+  isOpen,
+  setIsOpen,
+  collapsed,
+  onCollapse,
+}: Props) {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [contactsOpen, setContactsOpen] = useState(false);
+  const items = [
+    { label: "Dashboard", path: "/bd/dashboard", Icon: LayoutDashboard },
+    { label: "Leads & Contacts", path: "/bd/leads", Icon: Contact },
+    {
+      label: "Follow-ups Queue",
+      path: "/bd/dashboard#bd-action-queue",
+      Icon: CalendarClock,
+    },
+    {
+      label: "Pipelines & Deals",
+      path: "/bd/dashboard#bd-pipeline",
+      Icon: PanelsTopLeft,
+    },
+    {
+      label: "Callbacks & Retries",
+      path: "/bd/dashboard#bd-recovery",
+      Icon: PhoneCall,
+    },
+    {
+      label: "Performance & Targets",
+      path: "/bd/dashboard#bd-targets",
+      Icon: Target,
+    },
+    { label: "Reports & Analytics", path: "/bd/reports", Icon: BarChart3 },
+    { label: "Settings", path: "/bd/profile", Icon: Settings },
+  ];
+  async function logout() {
+    try {
+      await fetch(API_BASE_URL + "/api/attendance/logout", {
+        method: "POST",
+        headers: { "x-auth-token": localStorage.getItem("token") || "" },
+      });
+    } catch {
+      // End the local session if the logout request is unavailable.
+    } finally {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      navigate("/login");
+    }
+  }
+  return (
+    <aside
+      className={`bd-territory-nav fixed inset-y-0 left-0 z-50 flex h-screen flex-col transition-all lg:sticky lg:top-0 lg:translate-x-0 ${collapsed ? "is-collapsed" : ""} ${isOpen ? "translate-x-0" : "-translate-x-full"}`}
+    >
+      <div className="tf-brand">
+        {!collapsed && (
+          <Link to="/bd/dashboard" className="flex items-center gap-2">
+            <img
+              src="/logo.png"
+              alt="Jobs Territory"
+              className="h-8 w-8 object-contain"
+            />
+            <strong>Jobs Territory</strong>
+          </Link>
+        )}
+        <button
+          type="button"
+          aria-label="Collapse navigation"
+          title="Collapse navigation"
+          onClick={() => {
+            if (window.innerWidth >= 1024) onCollapse?.();
+            else setIsOpen(false);
+          }}
+        >
+          <Menu size={18} />
+        </button>
+      </div>
+      {!collapsed && <p className="tf-nav-label">Workspace</p>}
+      <nav
+        aria-label="BD workspace navigation"
+        className="flex-1 space-y-1 overflow-y-auto p-2"
+      >
+        {items.map(({ label, path, Icon }) => {
+          const current = location.pathname + location.hash;
+          const active =
+            path === "/bd/dashboard"
+              ? current === path
+              : path.includes("#")
+                ? current === path
+                : location.pathname.startsWith(path);
+          return (
+            <div key={path}>
+              <div className="flex items-center">
+                <Link
+                  to={path}
+                  title={collapsed ? label : undefined}
+                  onClick={() => setIsOpen(false)}
+                  className={`tf-nav-link min-w-0 flex-1 ${active ? "is-active" : ""}`}
+                  aria-current={active ? "page" : undefined}
+                >
+                  <Icon size={18} />
+                  {!collapsed && <span>{label}</span>}
+                </Link>
+                {label === "Leads & Contacts" && !collapsed && (
+                  <button
+                    type="button"
+                    aria-label="Show company and contact pages"
+                    aria-expanded={contactsOpen}
+                    onClick={() => setContactsOpen(!contactsOpen)}
+                    className="p-1"
+                  >
+                    <ChevronDown size={14} />
+                  </button>
+                )}
+              </div>
+              {label === "Leads & Contacts" && contactsOpen && !collapsed && (
+                <div className="ml-7 space-y-1 py-1 text-xs">
+                  <Link
+                    className="block p-2"
+                    to="/bd/leads"
                     onClick={() => setIsOpen(false)}
-                    className="p-2 hover:bg-slate-800 rounded-lg lg:hidden text-slate-400"
-                >
-                    <LogOut size={20} className="rotate-180" />
-                </button>
+                  >
+                    Company Details
+                  </Link>
+                  <Link
+                    className="block p-2"
+                    to="/bd/contacts"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    Contact Directory
+                  </Link>
+                  <Link
+                    className="block p-2"
+                    to="/bd/add-lead"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    Company Approvals
+                  </Link>
+                </div>
+              )}
             </div>
-
-            {/* Navigation Links */}
-            <nav className="flex-1 mt-4 px-3 space-y-1">
-                {menuItems.map((item) => (
-                    <NavLink
-                        key={item.path}
-                        to={item.path}
-                        onClick={() => setIsOpen(false)}
-                        className={({ isActive }) => `
-                            flex items-center justify-between px-4 py-3 rounded-xl transition-all duration-200 group
-                            ${isActive
-                                ? 'bg-[#0ea5e9]/10 text-[#0ea5e9] font-semibold border-l-4 border-[#0ea5e9]'
-                                : 'text-slate-400 hover:bg-slate-800/50 hover:text-white'}
-                        `}
-                    >
-                        {({ isActive }) => (
-                            <>
-                                <div className="flex items-center gap-3">
-                                    <span className={`transition-colors duration-200 ${isActive ? 'text-[#0ea5e9]' : 'group-hover:text-white'}`}>
-                                        {item.icon}
-                                    </span>
-                                    <span className="text-[0.95rem]">{item.label}</span>
-                                </div>
-                                <ChevronRight
-                                    size={16}
-                                    className={`opacity-0 group-hover:opacity-100 transition-all duration-200 -translate-x-2 group-hover:translate-x-0`}
-                                />
-                            </>
-                        )}
-                    </NavLink>
-                ))}
-            </nav>
-
-            {/* Logout Section */}
-            <div className="p-4 border-t border-slate-800/50">
-                <button
-                    onClick={() => {
-                        handleLogout();
-                        setIsOpen(false);
-                    }}
-                    className="flex items-center gap-3 w-full px-4 py-3 text-slate-400 hover:text-red-400 hover:bg-red-400/5 rounded-xl transition-all duration-200 group"
-                >
-                    <LogOut size={20} className="group-hover:translate-x-1 transition-transform" />
-                    <span className="text-[0.95rem] font-medium">Logout</span>
-                </button>
-            </div>
-        </aside>
-    );
-};
-
-export default BDSidebar;
+          );
+        })}
+        <Link to="/bd/email-sending" title="Send Email" className="tf-nav-link">
+          <Mail size={18} />
+          {!collapsed && <span>Send Email</span>}
+        </Link>
+      </nav>
+      <div className="tf-nav-footer">
+        <span className="flex items-center gap-2">
+          {!collapsed && (
+            <>
+              <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />
+              BD TERMINAL ACTIVE
+            </>
+          )}
+        </span>
+        <button
+          type="button"
+          title="Logout"
+          aria-label="Logout"
+          onClick={() => void logout()}
+        >
+          <LogOut size={15} />
+        </button>
+      </div>
+    </aside>
+  );
+}

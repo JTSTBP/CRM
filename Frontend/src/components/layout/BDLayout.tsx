@@ -1,7 +1,8 @@
 import React, { useEffect, useCallback } from 'react';
 import { Outlet, Navigate, useNavigate } from 'react-router-dom';
 import BDSidebar from './BDSidebar';
-import Navbar from './Navbar';
+import BDHeader from './BDHeader';
+import '../bd/territory.css';
 import { API_BASE_URL } from '../../config';
 import toast from 'react-hot-toast';
 
@@ -12,6 +13,7 @@ const BDLayout: React.FC = () => {
     const navigate = useNavigate();
 
     const [isSidebarOpen, setIsSidebarOpen] = React.useState(false);
+    const [isCollapsed, setIsCollapsed] = React.useState(false);
 
     const handleLogout = useCallback(async () => {
         const currentToken = localStorage.getItem('token');
@@ -63,7 +65,7 @@ const BDLayout: React.FC = () => {
     }
 
     return (
-        <div className="flex h-screen bg-[#f8fafc] relative overflow-hidden">
+        <div className="bd-territory-shell flex h-screen relative overflow-hidden">
             {/* Mobile Overlay */}
             {isSidebarOpen && (
                 <div
@@ -73,13 +75,13 @@ const BDLayout: React.FC = () => {
             )}
 
             {/* Sidebar */}
-            <BDSidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
+            <BDSidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} collapsed={isCollapsed} onCollapse={() => setIsCollapsed(!isCollapsed)} />
 
             {/* Main Content Area */}
             <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
-                <Navbar onMenuClick={() => setIsSidebarOpen(true)} />
+                <BDHeader onMenuClick={() => setIsSidebarOpen(true)} />
                 <main className="flex-1 overflow-y-auto relative">
-                    <div className="max-w-[1400px] mx-auto p-4 sm:p-6 lg:px-8 lg:py-6">
+                    <div className="max-w-[1720px] mx-auto p-4 lg:p-6">
                         <Outlet />
                     </div>
                 </main>
