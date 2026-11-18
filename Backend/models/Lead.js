@@ -25,6 +25,8 @@ const PointOfContactSchema = new mongoose.Schema({
     email: { type: String },
     linkedin_url: { type: String },
     requirementId: { type: String },
+    decisionMaker: { type: Boolean, default: false },
+    primaryContact: { type: Boolean, default: false },
 
     stage: {
         type: String,
@@ -52,6 +54,14 @@ const LeadSchema = new mongoose.Schema(
         company_email: { type: String },
         company_info: { type: String },
         company_size: { type: String },
+        companyProfile: {
+            headquarters: { type: String, maxlength: 300 },
+            businessModel: { type: String, maxlength: 300 },
+            footprint: { type: String, maxlength: 500 },
+            territory: { type: String, maxlength: 300 },
+            priority: { type: String, enum: ['Low', 'Normal', 'High'], default: 'Normal' },
+            tier: { type: String, maxlength: 100 },
+        },
         website_url: { type: String, sparse: true },
         status: {
             type: String,

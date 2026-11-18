@@ -989,4 +989,5 @@ router.put(
     return { message: "Employee targets saved." };
   }),
 );
+router.use(require('./companyWorkspaceRoutes'));
 module.exports = router;

@@ -60,11 +60,11 @@ router.post('/', auth, async (req, res) => {
             return res.status(400).json({ message: 'Title and due date are required' });
         }
 
-        if (poc_id) {
+        if (poc_id || lead_id) {
             const access = await bdAccess.scope(req.user);
             const company = await bdAccess.accessibleLead(access, lead_id);
             const contact = company.points_of_contact.find(p => String(p._id) === String(poc_id));
-            if (!contact || ['pending', 'rejected'].includes(contact.approvalStatus)) {
+            if (poc_id && (!contact || ['pending', 'rejected'].includes(contact.approvalStatus))) {
                 return res.status(400).json({ message: 'Choose an approved contact belonging to this company.' });
             }
             if (user_id && access.role !== 'Admin' && !access.ids.some(id => String(id) === String(user_id))) {

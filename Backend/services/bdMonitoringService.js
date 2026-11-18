@@ -45,6 +45,7 @@ async function scope(user) {
     id: String(current._id),
     ids: [current._id, ...team.map((item) => item._id)],
     name: current.name,
+    reporter: current.reporter,
   };
 }
 function ownerQuery(access, field = "ownerId") {

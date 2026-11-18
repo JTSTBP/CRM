@@ -206,7 +206,7 @@ const startServer = async () => {
 
     console.log(`MongoDB connected: ${conn.connection.host}`);
     await Promise.all(Object.values(require("./models/BDMonitoring")).map(model => model.init()));
-    await Promise.all(["Task", "CallActivity", "LeadActivity", "EmailSendLog"].map(name => require(`./models/${name}`).init()));
+    await Promise.all(["Task", "CallActivity", "LeadActivity", "EmailSendLog", "Mandate", "CompanyProposal"].map(name => require(`./models/${name}`).init()));
 
     app.listen(PORT, "0.0.0.0", () => {
       console.log(`CRM backend running on port ${PORT}`);
