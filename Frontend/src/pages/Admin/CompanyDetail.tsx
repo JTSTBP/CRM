@@ -32,7 +32,7 @@ import {
 import toast from "react-hot-toast";
 import { workspaceApi, displayTime } from "../../components/bd/workspaceApi";
 import BusinessEvents from "../../components/bd/BusinessEvents";
-import ActivityDialog from "../../components/bd/ActivityDialog";
+import LogContactActivity from "../../components/company/LogContactActivity";
 import { initials, webLink } from "../../components/contacts/contactTypes";
 import RequirementsDialog from "../../components/contacts/RequirementsDialog";
 import CompanyDialog, {
@@ -992,10 +992,9 @@ export default function CompanyDetail() {
         />
       )}
       {activity && (
-        <ActivityDialog
+        <LogContactActivity
           leadId={company._id}
           pocId={activity.id}
-          callMode={activity.call}
           onClose={() => setActivity(null)}
           onSaved={() => void saved()}
         />

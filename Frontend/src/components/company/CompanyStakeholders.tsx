@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import MobileCallLink from '../phone/MobileCallLink';
 import {
   Calendar,
   Download,
@@ -151,7 +152,7 @@ export default function CompanyStakeholders({
         onClick={() => onCall(person._id)}
       >
         <Phone size={12} />
-        Log Call
+        Log Activity
       </button>
       {person.phone && (
         <a
@@ -215,12 +216,10 @@ export default function CompanyStakeholders({
                 </h3>
                 <div>
                   {people.map((person) => (
-                    <button
+                    <Link
                       key={person._id}
                       className={person.primaryContact ? "is-primary" : ""}
-                      onClick={() =>
-                        onRole({ kind: "contact", contact: person })
-                      }
+                      to={`${prefix}/contacts/${person._id}`}
                     >
                       <span className="co-user-avatar">
                         {initials(person.name)}
@@ -236,7 +235,7 @@ export default function CompanyStakeholders({
                       {person.decisionMaker && (
                         <span className="co-badge">Decision maker</span>
                       )}
-                    </button>
+                    </Link>
                   ))}
                 </div>
               </div>
@@ -331,11 +330,17 @@ export default function CompanyStakeholders({
                   key={person._id}
                 >
                   <header>
-                    <span className="co-user-avatar">
+                    <Link className="co-user-avatar"
+                      aria-label={`Open ${person.name || "contact"} details`}
+                      to={`${prefix}/contacts/${person._id}`}>
                       {initials(person.name)}
-                    </span>
+                    </Link>
                     <div className="st-person">
-                      <h3>{person.name || "Unnamed contact"}</h3>
+                      <h3>
+                        <Link to={`${prefix}/contacts/${person._id}`}>
+                          {person.name || "Unnamed contact"}
+                        </Link>
+                      </h3>
                       <div className="st-badges">
                         {person.decisionMaker && (
                           <span className="co-badge">Decision maker</span>
@@ -363,10 +368,10 @@ export default function CompanyStakeholders({
                       </span>
                     )}
                     {person.phone && (
-                      <span>
+                      <MobileCallLink leadId={data.company._id} pocId={person._id} phone={person.phone} onDial={() => onCall(person._id)}>
                         <Phone size={12} />
                         {person.phone}
-                      </span>
+                      </MobileCallLink>
                     )}
                     {webLink(person.linkedin_url) && (
                       <a

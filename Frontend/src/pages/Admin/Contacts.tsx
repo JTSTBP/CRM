@@ -1,3 +1,4 @@
+import {startMobileDial} from '../../components/phone/mobileCall';
 import React, { useEffect, useState } from 'react';
 import { API_BASE_URL } from '../../config';
 import toast from 'react-hot-toast';
@@ -415,7 +416,7 @@ const Contacts: React.FC = () => {
                                                     <div className="flex gap-2">
                                                         <a
                                                             href={`tel:${poc.contact}`}
-                                                            onClick={(e) => { e.stopPropagation(); openFeedback({ ...poc, lead_id: company.lead_id, company_name: company.company_name } as any); }}
+                                                            onClick={(e) => { e.stopPropagation(); if(!startMobileDial(company.lead_id,poc.poc_id)){e.preventDefault();toast.error('Call logging is available from the mobile website only.');return;} openFeedback({ ...poc, lead_id: company.lead_id, company_name: company.company_name } as any); }}
                                                             className="flex-1 flex items-center justify-center gap-1.5 py-1.5 bg-white border border-slate-100 rounded-lg text-[10px] font-bold text-sky-600 shadow-sm"
                                                         >
                                                             <Phone size={12} /> Call
@@ -516,7 +517,7 @@ const Contacts: React.FC = () => {
                                                                 <div key={poc.poc_id} className="h-8 flex items-center gap-3">
                                                                     <a
                                                                         href={`tel:${poc.contact}`}
-                                                                        onClick={(e) => { e.stopPropagation(); openFeedback({ ...poc, lead_id: company.lead_id, company_name: company.company_name } as any); }}
+                                                                        onClick={(e) => { e.stopPropagation(); if(!startMobileDial(company.lead_id,poc.poc_id)){e.preventDefault();toast.error('Call logging is available from the mobile website only.');return;} openFeedback({ ...poc, lead_id: company.lead_id, company_name: company.company_name } as any); }}
                                                                         className="text-xs font-bold text-[#0ea5e9] hover:underline flex items-center gap-1.5"
                                                                     >
                                                                         <Phone size={12} className="text-[#0ea5e9]/70" />

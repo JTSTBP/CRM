@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import MobileCallLink from '../phone/MobileCallLink';
 import {
   Briefcase,
   CheckSquare,
@@ -187,9 +188,19 @@ export function Stakeholders({
             key={person._id}
           >
             <div className="co-contact-head">
-              <span className="co-user-avatar">{initials(person.name)}</span>
+              <Link
+                className="co-user-avatar"
+                aria-label={`Open ${person.name || "contact"} details`}
+                to={`${prefix}/contacts/${person._id}`}
+              >
+                {initials(person.name)}
+              </Link>
               <div>
-                <h3>{person.name || "Unnamed contact"}</h3>
+                <h3>
+                  <Link to={`${prefix}/contacts/${person._id}`}>
+                    {person.name || "Unnamed contact"}
+                  </Link>
+                </h3>
                 <p className="co-muted">
                   {person.designation || "Designation not recorded"}
                 </p>
@@ -209,10 +220,10 @@ export function Stakeholders({
             </div>
             <div className="co-contact-links">
               {person.phone && (
-                <a href={`tel:${person.phone}`}>
+                <MobileCallLink leadId={data.company._id} pocId={person._id} phone={person.phone} onDial={() => onCall(person._id)}>
                   <Phone size={14} />
                   {person.phone}
-                </a>
+                </MobileCallLink>
               )}
               {person.email && (
                 <a href={`mailto:${person.email}`}>

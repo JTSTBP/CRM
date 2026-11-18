@@ -108,3 +108,9 @@ Contact detail uses the supplied three-column reference and Hanken Grotesk typog
 Calls, channel confirmations, business outcomes, remarks, email, calendar links, contact edits and company master reuse existing flows. Task creation now passes the contact ID, and scoped contact-task completion uses the existing workspace endpoint. Timeline supports search, type filters, expansion and loading older communication records. Company events are included alongside contact events.
 
 Opportunity plans persist optional whole openRequirements (0–100000) and probability (0–100) values. POST /api/bd-workspace/requirements/:leadId saves up to 50 named company requirements, position and designation counts, with scope validation, request replay protection and audit events. This uses existing company hiring fields and does not create a separate recruitment tracking system.
+
+## Mobile call logging
+
+Call outcomes are entered after tapping a contact phone number in a phone browser. The tap opens the phone dialer and stores a contact-specific, two-hour context in the current tab; one successful call save consumes it. Laptop phone numbers are displayed as text, and laptop activity menus omit Call. Non-call outreach remains available on desktop.
+
+Both call-writing HTTP routes reject desktop browser requests and calls without the mobile dial-start flag. Phone detection uses browser identification; it is not hardware attestation. A tel link does not prove a completed or connected call. Users must confirm the actual outcome after returning from the dialer; the CRM does not infer duration or connection status.

@@ -9,6 +9,8 @@ import {
   type ContactWorkspace,
 } from "./workspaceApi";
 import BusinessEvents from "./BusinessEvents";
+import MobileCallLink from '../phone/MobileCallLink';
+import {hasMobileDial,isPhoneBrowser} from '../phone/mobileCall';
 
 const channels = ["Sent", "Pending", "Failed", "Not Applicable"];
 const linkedin = [
@@ -62,6 +64,7 @@ export default function ContactActivity({
   const [saving, setSaving] = useState(false);
   const [open, setOpen] = useState(callMode);
   const [callOutcome, setCallOutcome] = useState("");
+  const [callReady,setCallReady] = useState(() => hasMobileDial(leadId,pocId));
   const [requestId, setRequestId] = useState(() => crypto.randomUUID());
   const [version, setVersion] = useState(0);
   useEffect(() => {
@@ -144,6 +147,7 @@ export default function ContactActivity({
         meaningfulContactConfirmed: fields.meaningfulContactConfirmed === "on",
       });
       setRequestId(crypto.randomUUID());
+      setCallReady(false);
       await refresh();
       setOpen(false);
       onSaved?.(callOutcome);
@@ -205,12 +209,11 @@ export default function ContactActivity({
       {data && (
         <>
           {callMode && data.contact.phone && (
-            <a
+            <MobileCallLink leadId={leadId} pocId={pocId} phone={data.contact.phone} onDial={() => setCallReady(true)}
               className="inline-flex rounded border border-sky-200 bg-sky-50 px-3 py-2 text-sm font-semibold text-sky-800"
-              href={`tel:${data.contact.phone}`}
             >
               Dial {data.contact.phone}
-            </a>
+            </MobileCallLink>
           )}
           <div className="grid grid-cols-2 gap-2 text-xs md:grid-cols-4">
             {[
@@ -293,10 +296,12 @@ export default function ContactActivity({
                 </label>
                 <label className="space-y-1 text-xs font-semibold">
                   Call outcome
+                  {!callReady && <span className="block font-normal text-slate-500">To record a call, tap the phone number on the mobile website first.</span>}
                   <select
                     value={callOutcome}
+                    disabled={!isPhoneBrowser() || !callReady}
                     onChange={(event) => setCallOutcome(event.target.value)}
-                    required={callMode}
+                    required={callMode && isPhoneBrowser() && callReady}
                     className={fieldClass}
                   >
                     <option value="">

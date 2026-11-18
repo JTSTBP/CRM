@@ -1,4 +1,5 @@
 import { API_BASE_URL } from "../../config";
+import {hasMobileDial,clearMobileDial} from '../phone/mobileCall';
 
 export async function workspaceApi<T>(
   path: string,
@@ -6,6 +7,13 @@ export async function workspaceApi<T>(
   body?: unknown,
   signal?: AbortSignal,
 ): Promise<T> {
+  const contact = path.match(/^\/contact\/([^/]+)\/([^/?]+)$/);
+  const fields = body as {callOutcome?:string;activityType?:string} | undefined;
+  const isCall = method === 'POST' && contact && fields?.callOutcome && (!fields.activityType || fields.activityType === 'call');
+  if(isCall){
+    if(!hasMobileDial(contact[1],contact[2])) throw new Error('Use the mobile website and tap this contact’s phone number before logging a call.');
+    body={...fields,mobileDialStarted:true};
+  }
   const response = await fetch(`${API_BASE_URL}/api/bd-workspace${path}`, {
     method,
     signal,
@@ -18,6 +26,7 @@ export async function workspaceApi<T>(
   const data = await response.json().catch(() => null);
   if (!response.ok)
     throw new Error(data?.message || "Could not complete the request.");
+  if(isCall) clearMobileDial(contact[1],contact[2]);
   return data;
 }
 export const fieldClass =

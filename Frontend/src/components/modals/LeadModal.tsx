@@ -1,3 +1,4 @@
+import {startMobileDial} from '../phone/mobileCall';
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -461,6 +462,7 @@ const LeadModal: React.FC<Props> = ({ isOpen, onClose, leadId, initialMode = 'vi
     };
 
     const handleCallAction = (poc: any) => {
+        if (!leadId || !startMobileDial(leadId,poc._id)) { toast.error('Use the mobile website to call this contact.'); return; }
         // 1. Trigger the device dialer
         window.location.href = `tel:${poc.phone}`;
 

@@ -1,5 +1,4 @@
-import SmartBDDashboard from '../../components/bd/SmartBDDashboard';
-
+import ExecutiveDashboard from "../../components/admin/ExecutiveDashboard";
 export default function AdminDashboard() {
-    return <SmartBDDashboard />;
+  return <ExecutiveDashboard />;
 }

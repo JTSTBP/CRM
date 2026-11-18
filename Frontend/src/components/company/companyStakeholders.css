@@ -56,7 +56,7 @@
   justify-content: center;
   flex-wrap: wrap;
 }
-.st-tier button {
+.st-tier :is(button, a) {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -70,20 +70,20 @@
   padding: 10px;
   cursor: pointer;
 }
-.st-tier button:hover {
+.st-tier :is(button, a):hover {
   border-color: #2563eb;
 }
-.st-tier button > span:nth-child(2) {
+.st-tier :is(button, a) > span:nth-child(2) {
   min-width: 0;
   flex: 1;
 }
-.st-tier button strong {
+.st-tier :is(button, a) strong {
   display: block;
   font-size: 12px;
   line-height: 16px;
   overflow-wrap: anywhere;
 }
-.st-tier button small {
+.st-tier :is(button, a) small {
   display: block;
   font-size: 11px;
   line-height: 15px;
@@ -96,11 +96,11 @@
   background: #d5e0f8;
   font-size: 11px;
 }
-.st-tier button.is-primary {
+.st-tier :is(button, a).is-primary {
   border: 2px solid #004ac6;
   background: #f5f8ff;
 }
-.st-tier button.is-primary .co-user-avatar {
+.st-tier :is(button, a).is-primary .co-user-avatar {
   background: #004ac6;
   color: white;
 }
@@ -465,7 +465,7 @@
   .st-tier > div {
     flex-direction: column;
   }
-  .st-tier button {
+  .st-tier :is(button, a) {
     width: 100%;
   }
   .st-tier-1 > div {

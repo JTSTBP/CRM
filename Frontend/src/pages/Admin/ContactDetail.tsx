@@ -25,6 +25,9 @@ import toast from "react-hot-toast";
 import { API_BASE_URL } from "../../config";
 import ContactActivity from "../../components/bd/ContactActivity";
 import ActivityDialog from "../../components/bd/ActivityDialog";
+import MobileCallLink from '../../components/phone/MobileCallLink';
+import {isPhoneBrowser} from '../../components/phone/mobileCall';
+import LogContactActivity from "../../components/company/LogContactActivity";
 import BusinessEvents from "../../components/bd/BusinessEvents";
 import {
   workspaceApi,
@@ -33,6 +36,7 @@ import {
 } from "../../components/bd/workspaceApi";
 import RequirementsDialog from "../../components/contacts/RequirementsDialog";
 import ContactTimeline from "../../components/contacts/ContactTimeline";
+import ContactNotes from "../../components/contacts/ContactNotes";
 import {
   initials,
   webLink,
@@ -370,18 +374,18 @@ export default function ContactDetail() {
               <div className="cc-inset">
                 <span className="cc-label">Phone number</span>
                 {phone ? (
-                  <a href={`tel:${phone}`}>
+                  <MobileCallLink leadId={lead._id} pocId={poc._id} phone={phone} onDial={() => setDialog('call')}>
                     <strong>{phone}</strong>
-                  </a>
+                  </MobileCallLink>
                 ) : (
                   "Not provided"
                 )}
                 {poc.alternate_phone && (
                   <p className="cc-micro">
                     Alt:{" "}
-                    <a href={`tel:${poc.alternate_phone}`}>
+                    <MobileCallLink leadId={lead._id} pocId={poc._id} phone={poc.alternate_phone} onDial={() => setDialog('call')}>
                       {poc.alternate_phone}
-                    </a>
+                    </MobileCallLink>
                   </p>
                 )}
               </div>
@@ -403,7 +407,7 @@ export default function ContactDetail() {
                 <Mail size={14} />
                 Email
               </button>
-              <button onClick={() => setDialog("call")}>
+              <button disabled={!isPhoneBrowser()} title="Use the mobile website and tap the phone number" onClick={() => setDialog("call")}>
                 <Phone size={14} />
                 Call / Log call
               </button>
@@ -530,6 +534,7 @@ export default function ContactDetail() {
             {[
               ["overview", "Overview"],
               ["timeline", "Activities & Timeline"],
+              ["notes", "Notes"],
               ["business", "Proposals & Requirements"],
             ].map(([value, label]) => (
               <button
@@ -539,6 +544,8 @@ export default function ContactDetail() {
               >
                 {value === "overview" ? (
                   <Users size={15} />
+                ) : value === "notes" ? (
+                  <MessageSquare size={15} />
                 ) : value === "timeline" ? (
                   <History size={15} />
                 ) : (
@@ -596,6 +603,7 @@ export default function ContactDetail() {
                   </div>
                 </div>
               </section>
+              <ContactNotes data={data} onAdd={() => setDialog("remark")} />
               <div className="cc-communication">
                 <ContactActivity
                   key={`${id}:${version}`}
@@ -661,6 +669,7 @@ export default function ContactDetail() {
               </div>
             </>
           )}
+          {tab === "notes" && <ContactNotes data={data} onAdd={() => setDialog("remark")} />}
           {tab === "business" &&
             (workspace ? (
               <BusinessEvents
@@ -878,7 +887,11 @@ export default function ContactDetail() {
           />
         </aside>
       </div>
-      {(dialog === "activity" || dialog === "call") && (
+      {dialog === "activity" && (
+        <LogContactActivity leadId={lead._id} pocId={poc._id}
+          onClose={() => setDialog(null)} onSaved={saved} />
+      )}
+      {dialog === "call" && (
         <ActivityDialog
           leadId={lead._id}
           pocId={poc._id}
