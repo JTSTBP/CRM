@@ -990,4 +990,5 @@ router.put(
   }),
 );
 router.use(require('./companyWorkspaceRoutes'));
+router.use(require('./managerWorkspaceRoutes'));
 module.exports = router;
