@@ -1,5 +1,4 @@
-import SmartBDDashboard from '../../components/bd/SmartBDDashboard';
-
+import ManagerCommandDashboard from "../../components/manager/ManagerCommandDashboard";
 export default function ManagerDashboard() {
-    return <SmartBDDashboard />;
+  return <ManagerCommandDashboard />;
 }
