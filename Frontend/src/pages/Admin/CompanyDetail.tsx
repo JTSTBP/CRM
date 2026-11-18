@@ -39,6 +39,7 @@ import CompanyDialog, {
   type CompanyAction,
 } from "../../components/company/CompanyDialog";
 import CompanyBusinessDialog from "../../components/company/CompanyBusinessDialog";
+import CompanyStakeholders from "../../components/company/CompanyStakeholders";
 import CompanyTimeline from "../../components/company/CompanyTimeline";
 import {
   CompanyAgenda,
@@ -82,6 +83,7 @@ export default function CompanyDetail() {
         ? params.get("tab")!
         : "overview",
   );
+  const [taskContact, setTaskContact] = useState<string | undefined>();
   const [action, setAction] = useState<CompanyAction | null>(null),
     [addContact, setAddContact] = useState(false),
     [edit, setEdit] = useState(false),
@@ -135,6 +137,7 @@ export default function CompanyDetail() {
     setAddContact(false);
     setEdit(false);
     setTask(false);
+    setTaskContact(undefined);
     setRequirements(false);
     setMore(false);
     setEmailContact(null);
@@ -571,7 +574,9 @@ export default function CompanyDetail() {
           </button>
         ))}
       </nav>
-      <div className="co-body-grid">
+      <div
+        className={`co-body-grid ${tab === "contacts" ? "st-contact-layout" : ""}`}
+      >
         <div className="co-main-column">
           {tab === "overview" && (
             <>
@@ -807,7 +812,17 @@ export default function CompanyDetail() {
           )}
           {tab === "contacts" && (
             <>
-              {stakeholders()}
+              <CompanyStakeholders
+                data={data}
+                prefix={prefix}
+                onRole={setAction}
+                onCall={(id) => call(id, true)}
+                onEmail={setEmailContact}
+                onSchedule={(id) => {
+                  setTaskContact(id);
+                  setTask(true);
+                }}
+              />
               <PendingLinkedInContacts
                 leadId={company._id}
                 contacts={
@@ -993,8 +1008,12 @@ export default function CompanyDetail() {
       />
       <TaskModal
         isOpen={task}
+        pocId={taskContact}
         leadId={company._id}
-        onClose={() => setTask(false)}
+        onClose={() => {
+          setTask(false);
+          setTaskContact(undefined);
+        }}
         onSuccess={() => void saved()}
       />
       {edit && (

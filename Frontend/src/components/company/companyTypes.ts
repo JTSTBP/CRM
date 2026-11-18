@@ -86,6 +86,9 @@ export interface CompanyWorkspace {
   contacts: (ContactPerson & {
     decisionMaker?: boolean;
     primaryContact?: boolean;
+    stakeholderTier?: string;
+    stakeholderRole?: string;
+    stakeholderNote?: string;
   })[];
   owners: CompanyUser[];
   reviewers: CompanyUser[];

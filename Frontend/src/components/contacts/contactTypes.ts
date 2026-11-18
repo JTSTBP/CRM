@@ -45,6 +45,7 @@ export interface ContactData {
     content?: string;
     created_at: string;
     profile?: { name: string };
+    poc_id?: string;
     fileUrl?: string;
     voiceUrl?: string;
   }[];

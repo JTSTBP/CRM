@@ -27,6 +27,9 @@ const PointOfContactSchema = new mongoose.Schema({
     requirementId: { type: String },
     decisionMaker: { type: Boolean, default: false },
     primaryContact: { type: Boolean, default: false },
+    stakeholderTier: { type: String, enum: ['Unmapped', 'Executive Sponsor', 'Primary Buyer', 'Hiring & Operations'], default: 'Unmapped' },
+    stakeholderRole: { type: String, maxlength: 150 },
+    stakeholderNote: { type: String, maxlength: 2000 },
 
     stage: {
         type: String,

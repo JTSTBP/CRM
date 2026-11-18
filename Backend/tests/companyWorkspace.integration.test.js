@@ -223,6 +223,11 @@ test(
       ).length,
       1,
     );
+    const rolePath=path+'/contact/'+lead.points_of_contact[0]._id;
+    assert.equal((await api(bd,rolePath,'PATCH',{requestId:requestId(),primaryContact:false,decisionMaker:true,stakeholderTier:'Invalid'})).status,400);
+    assert.equal((await api(bd,rolePath,'PATCH',{requestId:requestId(),primaryContact:false,decisionMaker:true,stakeholderTier:'Primary Buyer',stakeholderRole:'Mandate controller',stakeholderNote:'Confirm scope with HR before sign-off.'})).status,200);
+    const role=(await api(bd,path)).data.contacts.find(person=>String(person._id)===String(lead.points_of_contact[0]._id));
+    assert.equal(role.stakeholderTier,'Primary Buyer');assert.equal(role.stakeholderRole,'Mandate controller');assert.equal(role.stakeholderNote,'Confirm scope with HR before sign-off.');
     assert.equal(
       (
         await api(outsider, "/tasks", "POST", {

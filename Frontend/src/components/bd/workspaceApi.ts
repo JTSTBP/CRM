@@ -52,6 +52,7 @@ export interface ContactState {
   attempts: number;
   callOutcome?: string;
   lastCallAt?: string;
+  lastActivityAt?: string;
   firstUnsuccessfulAt?: string;
   callNotApplicable?: boolean;
   whatsapp?: string;

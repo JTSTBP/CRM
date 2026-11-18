@@ -239,6 +239,36 @@ export default function CompanyDialog({
         {action.kind === "contact" && (
           <>
             <p className="co-full">{action.contact.name}</p>
+            <label>
+              Stakeholder tier
+              <select
+                name="stakeholderTier"
+                defaultValue={action.contact.stakeholderTier || "Unmapped"}
+              >
+                {[
+                  "Unmapped",
+                  "Executive Sponsor",
+                  "Primary Buyer",
+                  "Hiring & Operations",
+                ].map((tier) => (
+                  <option key={tier}>{tier}</option>
+                ))}
+              </select>
+            </label>
+            {field(
+              "Account role label",
+              "stakeholderRole",
+              action.contact.stakeholderRole,
+            )}
+            <label className="co-full">
+              Relationship / influence notes
+              <textarea
+                name="stakeholderNote"
+                rows={3}
+                maxLength={2000}
+                defaultValue={action.contact.stakeholderNote}
+              />
+            </label>
             <label className="co-check">
               <input
                 type="checkbox"

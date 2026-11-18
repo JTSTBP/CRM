@@ -27,3 +27,12 @@ Writes validate the current database role/status, company access, request identi
 ## Verification
 
 `Backend/tests/companyWorkspace.integration.test.js` uses a random isolated `crm_company_test_*` database. It covers isolation, field validation, mandate progress/replay/stale writes, stakeholder roles, company tasks, stage evidence, note links, draft targets, review permissions, notifications, confirmed dispatch and timeline scope/filtering. Cleanup is guarded to that test database. Frontend verification uses the production TypeScript/Vite build and browser checks against isolated preview records.
+
+
+## Contacts and decision makers
+
+The Contacts tab follows the stakeholder reference without changing app sidebars. Explicit stakeholder tiers (Executive Sponsor, Primary Buyer, Hiring & Operations, Unmapped), account-role labels and relationship notes persist on company contacts through the scoped role endpoint. Existing contacts stay unmapped until a user assigns a tier. Primary-contact and decision-maker flags keep their existing meaning.
+
+Cards and table views share name/role/email/phone search, tier and decision-maker filters, sorting, and filtered CSV export. CSV values are quoted and leading formula characters escaped. Per-contact call, email, WhatsApp, workspace and scheduling actions retain the contact ID. Contact-linked tasks appear in the scheduled touchpoints panel and contact history. Pending and rejected alternatives remain available below the workspace.
+
+Penetration counts a connected call or accepted LinkedIn connection and states that rule on screen. Email availability means an address is recorded, not verified. Scheduled-call counts cover the next seven days. Delivery/read receipts, email opens, response times and benchmarks are not invented.

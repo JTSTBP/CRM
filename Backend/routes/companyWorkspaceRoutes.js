@@ -205,6 +205,12 @@ router.patch(
           typeof req.body.primaryContact !== "boolean"
         )
           service.fail("Choose the contact role flags.");
+        if(req.body.stakeholderTier !== undefined){
+          if(!['Unmapped','Executive Sponsor','Primary Buyer','Hiring & Operations'].includes(req.body.stakeholderTier))service.fail('Choose a valid stakeholder tier.');
+          contact.stakeholderTier=req.body.stakeholderTier;
+        }
+        if(req.body.stakeholderRole !== undefined)contact.stakeholderRole=boundedText(req.body.stakeholderRole,'stakeholder role',150);
+        if(req.body.stakeholderNote !== undefined)contact.stakeholderNote=boundedText(req.body.stakeholderNote,'relationship note',2000);
         if (req.body.primaryContact)
           lead.points_of_contact.forEach((person) => {
             person.primaryContact = false;
