@@ -384,7 +384,7 @@ export default function TerritoryQueue({
       </div>
       {!data.queue.length && (
         <p className="tf-empty">
-          No matching contacts. Use Quick Add Activity to start tracking an
+          No matching contacts. Open a company contact to start tracking an
           existing company contact.
         </p>
       )}

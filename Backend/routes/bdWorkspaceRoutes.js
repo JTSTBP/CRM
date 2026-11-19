@@ -47,6 +47,7 @@ router.get(
   "/dashboard",
   handle((req, access) => reporting.dashboard(access, req.query)),
 );
+router.get('/activity-report',handle((req,access)=>require('../services/bdActivityReportService').activityReport(access,req.query)));
 router.get("/queue-export", async (req, res) => {
   try {
     const access = await service.scope(req.user);

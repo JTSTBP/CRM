@@ -114,3 +114,13 @@ Opportunity plans persist optional whole openRequirements (0–100000) and proba
 Call outcomes are entered after tapping a contact phone number in a phone browser. The tap opens the phone dialer and stores a contact-specific, two-hour context in the current tab; one successful call save consumes it. Laptop phone numbers are displayed as text, and laptop activity menus omit Call. Non-call outreach remains available on desktop.
 
 Both call-writing HTTP routes reject desktop browser requests and calls without the mobile dial-start flag. Phone detection uses browser identification; it is not hardware attestation. A tel link does not prove a completed or connected call. Users must confirm the actual outcome after returning from the dialer; the CRM does not infer duration or connection status.
+
+## Automatic Proposal Sent milestone
+
+Changing an approved company's stage from another status to Proposal Sent automatically records its first sent-proposal milestone against an active, assigned BD executive. BD changes credit the acting executive when assigned; Manager/Admin changes use the responsible active assignee. The milestone updates daily proposal targets and awaiting-feedback counts without a separate dashboard action. Company-stage updates, standard company edits and bulk stage changes are transactional with the proposal record. Retries, unchanged stages, repeated stage cycling and companies with an already recorded sent proposal do not create a duplicate initial milestone. Additional explicitly confirmed proposals retain their reference-based business workflow. Historic imported Proposal Sent statuses are not backfilled into today's targets.
+
+The dashboard Record Sent Proposal button and BD header Quick Add Activity button have been removed. Contact-specific activity logging remains available from company/contact workspaces.
+
+## BD dashboard date filter
+
+The BD dashboard offers Today, This Week, This Month and an inclusive custom From/To range (up to 93 days). `/api/bd-workspace/activity-report` reports only the currently authenticated BD executive's activity, uses Asia/Kolkata day boundaries and rejects invalid/future ranges. The selected-period report includes recorded calls, confirmed channel messages, proposal milestones and onboardings; proposal targets use effective-dated targets and the working-day calendar. Today’s operational queues, daily target cards and compliance state remain live and are explicitly labelled separately from the historical report.

@@ -1,13 +1,12 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Bell, Calendar, Menu, PlusCircle, Search } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { Bell, Calendar, Menu, Search } from "lucide-react";
 import { API_BASE_URL } from "../../config";
 import { workspaceApi } from "../bd/workspaceApi";
 
 export default function BDHeader({ onMenuClick }: { onMenuClick: () => void }) {
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const navigate = useNavigate();
-  const location = useLocation();
   const input = useRef<HTMLInputElement>(null);
   const [search, setSearch] = useState("");
   const [companies, setCompanies] = useState<
@@ -75,11 +74,6 @@ export default function BDHeader({ onMenuClick }: { onMenuClick: () => void }) {
       clearTimeout(timer);
     };
   }, [search]);
-  function quickAdd() {
-    if (location.pathname === "/bd/dashboard")
-      window.dispatchEvent(new CustomEvent("bd:quick-add"));
-    else navigate("/bd/dashboard?action=activity");
-  }
   function submit(event: FormEvent) {
     event.preventDefault();
     navigate(
@@ -138,10 +132,6 @@ export default function BDHeader({ onMenuClick }: { onMenuClick: () => void }) {
         })}
       </p>
       <div className="flex items-center gap-3">
-        <button type="button" className="tf-button primary" onClick={quickAdd}>
-          <PlusCircle size={16} />
-          <span>+ Quick Add Activity</span>
-        </button>
         <button
           type="button"
           aria-label="Urgent notifications"

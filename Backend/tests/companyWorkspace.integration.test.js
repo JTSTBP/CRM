@@ -75,6 +75,7 @@ before(
     app.use(express.json());
     app.use("/api/bd-workspace", require("../routes/bdWorkspaceRoutes"));
     app.use("/api/tasks", require("../routes/taskRoutes"));
+    app.use("/api/leads", require("../routes/leadRoutes"));
     server = app.listen(0, "127.0.0.1");
     await new Promise((resolve) => server.on("listening", resolve));
     base = `http://127.0.0.1:${server.address().port}/api`;
@@ -223,11 +224,40 @@ test(
       ).length,
       1,
     );
-    const rolePath=path+'/contact/'+lead.points_of_contact[0]._id;
-    assert.equal((await api(bd,rolePath,'PATCH',{requestId:requestId(),primaryContact:false,decisionMaker:true,stakeholderTier:'Invalid'})).status,400);
-    assert.equal((await api(bd,rolePath,'PATCH',{requestId:requestId(),primaryContact:false,decisionMaker:true,stakeholderTier:'Primary Buyer',stakeholderRole:'Mandate controller',stakeholderNote:'Confirm scope with HR before sign-off.'})).status,200);
-    const role=(await api(bd,path)).data.contacts.find(person=>String(person._id)===String(lead.points_of_contact[0]._id));
-    assert.equal(role.stakeholderTier,'Primary Buyer');assert.equal(role.stakeholderRole,'Mandate controller');assert.equal(role.stakeholderNote,'Confirm scope with HR before sign-off.');
+    const rolePath = path + "/contact/" + lead.points_of_contact[0]._id;
+    assert.equal(
+      (
+        await api(bd, rolePath, "PATCH", {
+          requestId: requestId(),
+          primaryContact: false,
+          decisionMaker: true,
+          stakeholderTier: "Invalid",
+        })
+      ).status,
+      400,
+    );
+    assert.equal(
+      (
+        await api(bd, rolePath, "PATCH", {
+          requestId: requestId(),
+          primaryContact: false,
+          decisionMaker: true,
+          stakeholderTier: "Primary Buyer",
+          stakeholderRole: "Mandate controller",
+          stakeholderNote: "Confirm scope with HR before sign-off.",
+        })
+      ).status,
+      200,
+    );
+    const role = (await api(bd, path)).data.contacts.find(
+      (person) => String(person._id) === String(lead.points_of_contact[0]._id),
+    );
+    assert.equal(role.stakeholderTier, "Primary Buyer");
+    assert.equal(role.stakeholderRole, "Mandate controller");
+    assert.equal(
+      role.stakeholderNote,
+      "Confirm scope with HR before sign-off.",
+    );
     assert.equal(
       (
         await api(outsider, "/tasks", "POST", {
@@ -389,5 +419,192 @@ test(
       proposalTimeline.items.some((item) => item.title === "proposal-approve"),
     );
     assert.equal((await api(bd, path + "/timeline?search=%5B")).status, 200);
+  },
+);
+
+test(
+  "Proposal Sent automatically counts once, credits the assigned executive and is atomic",
+  { skip: !enabled, timeout: 120000 },
+  async () => {
+    const first = await Lead.create({
+      company_name: "Automatic proposal fixture",
+      assignedBy: bd._id,
+      stage: "Contacted",
+    });
+    const path = `/bd-workspace/company/${first._id}/stage`,
+      payload = {
+        requestId: requestId(),
+        stage: "Proposal Sent",
+        confirmed: true,
+        reason: "Proposal sent to the hiring contact",
+      };
+    const baseline = await models.BusinessEvent.countDocuments({
+      ownerId: bd._id,
+      kind: "proposal",
+    });
+    const dailyBefore = (await api(bd, "/bd-workspace/dashboard")).data.totals
+      .proposals;
+    assert.equal((await api(outsider, path, "POST", payload)).status, 404);
+    const saved = await api(bd, path, "POST", payload);
+    assert.equal(saved.status, 200, JSON.stringify(saved.data));
+    assert.equal((await api(bd, path, "POST", payload)).status, 200);
+    assert.equal(
+      await models.BusinessEvent.countDocuments({
+        leadId: first._id,
+        kind: "proposal",
+      }),
+      1,
+    );
+    const automatic = await models.BusinessEvent.findOne({
+      leadId: first._id,
+      kind: "proposal",
+    });
+    assert.equal(String(automatic.ownerId), String(bd._id));
+    assert.equal(automatic.status, "Awaiting feedback");
+    assert.equal(
+      (
+        await api(bd, path, "POST", {
+          ...payload,
+          requestId: requestId(),
+          stage: "Negotiation",
+        })
+      ).status,
+      200,
+    );
+    assert.equal(
+      (await api(bd, path, "POST", { ...payload, requestId: requestId() }))
+        .status,
+      200,
+    );
+    assert.equal(
+      await models.BusinessEvent.countDocuments({
+        leadId: first._id,
+        kind: "proposal",
+      }),
+      1,
+    );
+    const second = await Lead.create({
+      company_name: "Legacy stage update fixture",
+      assignedBy: bd._id,
+    });
+    assert.equal(
+      (await api(bd, `/leads/${second._id}`, "PUT", { stage: "Proposal Sent" }))
+        .status,
+      200,
+    );
+    assert.equal(
+      (await api(bd, `/leads/${second._id}`, "PUT", { stage: "Proposal Sent" }))
+        .status,
+      200,
+    );
+    assert.equal(
+      await models.BusinessEvent.countDocuments({
+        leadId: second._id,
+        kind: "proposal",
+      }),
+      1,
+    );
+    const third = await Lead.create({
+      company_name: "Bulk stage fixture",
+      assignedBy: bd._id,
+    });
+    const foreign = await Lead.create({
+      company_name: "Outside bulk fixture",
+      assignedBy: outsider._id,
+    });
+    assert.equal(
+      (
+        await api(manager, "/leads/bulk/update", "PATCH", {
+          ids: [String(third._id), String(foreign._id)],
+          updates: { stage: "Proposal Sent" },
+        })
+      ).status,
+      200,
+    );
+    assert.equal(
+      await models.BusinessEvent.countDocuments({
+        leadId: third._id,
+        ownerId: bd._id,
+        kind: "proposal",
+      }),
+      1,
+    );
+    assert.equal((await Lead.findById(foreign._id)).stage, "New");
+    const noOwner = await Lead.create({
+      company_name: "Unassigned milestone fixture",
+      assignedBy: manager._id,
+    });
+    const failed = await api(
+      manager,
+      `/bd-workspace/company/${noOwner._id}/stage`,
+      "POST",
+      { ...payload, requestId: requestId() },
+    );
+    assert.equal(failed.status, 400);
+    assert.equal((await Lead.findById(noOwner._id)).stage, "New");
+    assert.equal(
+      await models.BusinessEvent.countDocuments({
+        ownerId: bd._id,
+        kind: "proposal",
+      }),
+      baseline + 3,
+    );
+    assert.equal(
+      (await api(bd, "/bd-workspace/dashboard")).data.totals.proposals,
+      dailyBefore + 3,
+    );
+    const failedLegacy = await api(manager, `/leads/${noOwner._id}`, "PUT", {
+      stage: "Proposal Sent",
+    });
+    assert.equal(failedLegacy.status, 400);
+    assert.equal((await Lead.findById(noOwner._id)).stage, "New");
+    const validBulk = await Lead.create({
+      company_name: "Atomic bulk fixture",
+      assignedBy: bd._id,
+    });
+    assert.equal(
+      (
+        await api(manager, "/leads/bulk/update", "PATCH", {
+          ids: [String(validBulk._id), String(noOwner._id)],
+          updates: { stage: "Proposal Sent" },
+        })
+      ).status,
+      400,
+    );
+    assert.equal((await Lead.findById(validBulk._id)).stage, "New");
+    assert.equal(
+      await models.BusinessEvent.countDocuments({ leadId: validBulk._id }),
+      0,
+    );
+    const recorded = await Lead.create({
+      company_name: "Previously recorded proposal fixture",
+      assignedBy: bd._id,
+    });
+    await models.BusinessEvent.create({
+      leadId: recorded._id,
+      ownerId: bd._id,
+      actorId: bd._id,
+      kind: "proposal",
+      reference: "EXISTING-PROPOSAL",
+      evidence: "Already sent",
+      sentAt: new Date(),
+      status: "Awaiting feedback",
+    });
+    assert.equal(
+      (
+        await api(bd, `/bd-workspace/company/${recorded._id}/stage`, "POST", {
+          ...payload,
+          requestId: requestId(),
+        })
+      ).status,
+      200,
+    );
+    assert.equal(
+      await models.BusinessEvent.countDocuments({
+        leadId: recorded._id,
+        kind: "proposal",
+      }),
+      1,
+    );
   },
 );

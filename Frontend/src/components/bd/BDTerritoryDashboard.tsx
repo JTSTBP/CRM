@@ -33,6 +33,7 @@ import TerritoryDialog, {
 } from "./TerritoryDialog";
 import ActivityDialog from "./ActivityDialog";
 import ContactPicker from "./ContactPicker";
+import ActivityDateFilter from './ActivityDateFilter';
 import TaskModal from "../modals/TaskModal";
 import SendEmailModal from "../modals/SendEmailModal";
 import { displayTime, workspaceApi } from "./workspaceApi";
@@ -65,12 +66,10 @@ export default function BDTerritoryDashboard() {
   const [pendingTab, setPendingTab] = useState("all");
   const [period, setPeriod] = useState("month");
   const [picker, setPicker] = useState(false);
-  const [proposalPicker, setProposalPicker] = useState(false);
   const [selected, setSelected] = useState<{
     lead: string;
     contact: string;
     call?: boolean;
-    businessKind?: "proposal" | "onboarding";
   } | null>(null);
   const [action, setAction] = useState<TerritoryAction | null>(null);
   const [customTask, setCustomTask] = useState(false);
@@ -318,6 +317,7 @@ export default function BDTerritoryDashboard() {
           </button>
         </div>
       </section>
+      <ActivityDateFilter refreshKey={refresh}/>
       {error && (
         <p role="alert" className="tf-status-message tf-error">
           {error}{" "}
@@ -422,7 +422,7 @@ export default function BDTerritoryDashboard() {
                 </strong>
                 <p className="mt-1">
                   {data.qualifiedAwaitingProposal
-                    ? "Open your qualified companies and record the proposal when it has been sent."
+                    ? "Change the company status to Proposal Sent after sending the proposal. Your target updates automatically."
                     : "Qualify opportunities in the contact workspace to build your proposal pipeline."}
                 </p>
                 <p className="tf-small mt-1">
@@ -435,16 +435,9 @@ export default function BDTerritoryDashboard() {
                   <br />
                   Due {data.config.cutoff} IST
                 </span>
-                <button
-                  className="tf-button primary"
-                  onClick={() => {
-                    setProposalPicker(true);
-                    setPicker(true);
-                  }}
-                >
-                  <Plus size={14} />
-                  Record Sent Proposal
-                </button>
+                <span className="tf-small">
+                  Updates automatically from Proposal Sent status.
+                </span>
               </div>
             </article>
             <article className="tf-card tf-target-card">
@@ -743,7 +736,6 @@ export default function BDTerritoryDashboard() {
           title="Quick Add Activity"
           onClose={() => {
             setPicker(false);
-            setProposalPicker(false);
           }}
         >
           <div className="mt-4">
@@ -753,9 +745,7 @@ export default function BDTerritoryDashboard() {
                 setSelected({
                   lead,
                   contact,
-                  businessKind: proposalPicker ? "proposal" : undefined,
                 });
-                setProposalPicker(false);
               }}
             />
           </div>
@@ -766,7 +756,6 @@ export default function BDTerritoryDashboard() {
           leadId={selected.lead}
           pocId={selected.contact}
           callMode={selected.call}
-          businessKind={selected.businessKind}
           onClose={() => setSelected(null)}
           onSaved={reload}
         />

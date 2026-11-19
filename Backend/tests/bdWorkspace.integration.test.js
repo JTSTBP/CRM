@@ -568,3 +568,15 @@ test(
     assert.ok((await api(bd, `/contact/${assignedContactLead._id}/${assignedContact._id}`)).data.history.some(event=>event.kind === "requirements-updated"));
   },
 );
+
+test('BD activity date report uses inclusive IST dates and excludes other executives',{skip:!enabled,timeout:120000},async()=>{
+ const day=rules.dayKey(new Date(+rules.dayStart(rules.dayKey())-rules.DAY)),at=new Date(+rules.dayStart(day)+3600000),path=`/activity-report?period=custom&from=${day}&to=${day}`;
+ const before=await api(bd,path);assert.equal(before.status,200,JSON.stringify(before.data));
+ await Call.create({userId:bd._id,leadId:lead._id,pocId:String(contact._id),phone:'55501',stage:'Connected',timestamp:at});
+ await Call.create({userId:outsider._id,leadId:lead._id,pocId:String(contact._id),phone:'55501',stage:'Connected',timestamp:at});
+ await Call.create([{userId:bd._id,leadId:lead._id,pocId:String(contact._id),phone:'55501',stage:'Connected',timestamp:new Date(+rules.dayStart(day)-1)},{userId:bd._id,leadId:lead._id,pocId:String(contact._id),phone:'55501',stage:'Connected',timestamp:new Date(+rules.dayStart(day)+rules.DAY)}]);
+ await models.Event.create({actorId:bd._id,ownerId:bd._id,leadId:lead._id,pocId:contact._id,requestId:requestId(),kind:'activity',day,createdAt:at,data:{whatsappConfirmed:true}});
+ const result=await api(bd,path);assert.equal(result.status,200);assert.equal(result.data.totals.calls,before.data.totals.calls+1);assert.equal(result.data.totals.connected,before.data.totals.connected+1);assert.equal(result.data.totals.whatsapp,before.data.totals.whatsapp+1);assert.equal(result.data.range.from,day);assert.equal(result.data.range.to,day);
+ assert.equal((await api(manager,path)).status,403);assert.equal((await api(bd,'/activity-report?period=custom&from=bad&to=bad')).status,400);
+ const future=rules.dayKey(new Date(Date.now()+2*rules.DAY));assert.equal((await api(bd,`/activity-report?period=custom&from=${future}&to=${future}`)).status,400);
+});

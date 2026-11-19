@@ -1076,11 +1076,20 @@ router.put('/:id', auth, async (req, res) => {
         }
         if (status) updateData.status = status;
 
-        const updatedLead = await Lead.findByIdAndUpdate(
+        const updateLead = session => Lead.findByIdAndUpdate(
             req.params.id,
             { $set: updateData },
-            { new: true, runValidators: true }
+            { new: true, runValidators: true, ...(session ? {session} : {}) }
         ).populate('assignedBy', 'name email').populate('createdBy', 'name email').populate('assignedTo', 'name email');
+        let updatedLead;
+        if(stage === 'Proposal Sent') {
+            const access = await bdAccess.scope(req.user);
+            await mongoose.connection.transaction(async session => {
+                const current = await bdAccess.accessibleLead(access,req.params.id,session);
+                updatedLead = await updateLead(session);
+                if(current.stage !== 'Proposal Sent') await require('../services/proposalStageService').recordProposalStages([updatedLead],access,session);
+            });
+        } else updatedLead = await updateLead();
 
         if (!updatedLead) return res.status(404).json({ message: 'Lead not found' });
 
@@ -1183,7 +1192,7 @@ router.put('/:id', auth, async (req, res) => {
         res.json(updatedLead);
     } catch (err) {
         console.error('Update lead error:', err);
-        res.status(500).json({ message: 'Server Error', error: err.message });
+        res.status(err.status || 500).json({ message: err.status ? err.message : 'Server Error', error: err.message });
     }
 });
 
@@ -1481,12 +1490,22 @@ router.patch('/bulk/update', auth, async (req, res) => {
             };
         }
 
-        const result = await Lead.updateMany(query, { $set: updates });
+        let result;
+        if(updates.stage === 'Proposal Sent') {
+            const access = await bdAccess.scope(req.user);
+            await mongoose.connection.transaction(async session => {
+                const companies = await Lead.find(query).session(session);
+                const changed = companies.filter(company=>company.stage !== 'Proposal Sent');
+                result = await Lead.updateMany(query,{$set:updates},{session,runValidators:true});
+                await require('../services/proposalStageService').recordProposalStages(changed.map(company=>({...company.toObject(),...updates})),access,session);
+                if(changed.length) await LeadActivity.insertMany(changed.map(company=>({leadId:company._id,type:'Stage Changed',performedBy:access.id,performedByName:access.name,description:'Company status changed to Proposal Sent.',metadata:{from:company.stage,to:'Proposal Sent'},timestamp:new Date()})),{session});
+            });
+        } else result = await Lead.updateMany(query, { $set: updates });
 
         res.json({ message: `Successfully updated ${result.modifiedCount} leads.` });
     } catch (err) {
         console.error('Bulk update error:', err);
-        res.status(500).json({ message: 'Server Error' });
+        res.status(err.status || 500).json({ message: err.status ? err.message : 'Server Error' });
     }
 });
 

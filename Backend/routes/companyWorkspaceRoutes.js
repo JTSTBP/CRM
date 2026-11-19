@@ -142,16 +142,6 @@ router.post(
             "Choose a stage, explain the change and confirm the milestone occurred.",
           );
         if (
-          req.body.stage === "Proposal Sent" &&
-          !(await models.BusinessEvent.exists({
-            leadId: lead._id,
-            kind: "proposal",
-          }).session(session))
-        )
-          service.fail(
-            "Record a confirmed sent proposal before moving to Proposal Sent.",
-          );
-        if (
           req.body.stage === "Onboarded" &&
           !(await models.BusinessEvent.exists({
             leadId: lead._id,
@@ -164,6 +154,7 @@ router.post(
         const from = lead.stage;
         if (from !== req.body.stage) {
           lead.stage = req.body.stage;
+          if (lead.stage === 'Proposal Sent') await require('../services/proposalStageService').recordProposalStages([lead],access,session);
           await lead.save({ session });
           await Activity.create(
             [

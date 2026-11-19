@@ -229,6 +229,16 @@ before(
       due_date: new Date(Date.now() - 2 * rules.DAY),
       completed: false,
     });
+    // Keep the complete executive submitted even when this test runs after cutoff.
+    await models.Submission.create({
+      userId: bd1._id,
+      day: today,
+      submittedAt: new Date(),
+      snapshotAt: new Date(),
+      late:
+        Date.now() > +rules.cutoffAt(today, new models.Settings().toObject()),
+      activityCount: 1,
+    });
     const app = express();
     app.use(express.json());
     app.use("/api/bd-workspace", require("../routes/bdWorkspaceRoutes"));
